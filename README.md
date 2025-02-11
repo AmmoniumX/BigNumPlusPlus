@@ -1,6 +1,10 @@
 # BigNum++
 Modified C++ port of https://github.com/veprogames/lua-big-number
 
-Changed to increase maximum range by moving negative numbers outside of the exponent's range (Emin is 0, therefore Emax is higher)
+Numbers are represented internally as `m * 10^e`.
 
-Tradeoff: Cannot store numbers between (-1, 0) or (0, 1), i.e any `|x| < 1` except 0, but those aren't usually needed in the types of games that would use this library
+Do note that the type of `e` is `uintmax_t`. This maximizes Emax, at the cost of Emin being 0.
+
+Tradeoff: Cannot store numbers between (-1, 0) or (0, 1), i.e any `|x| < 1` except 0, but for the scope of this library, it is assumed that these are not needed (the user will only use large whole numbers).
+
+Maximum representable value would be in the order of maxnitude of `10 ^ numeric_limits<uintmax_t>::max()`.
