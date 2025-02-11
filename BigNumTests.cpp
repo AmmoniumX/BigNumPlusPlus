@@ -1,0 +1,96 @@
+#include <iostream>
+#include <cstdlib>
+
+#include "BigNum.hh"
+
+using namespace std;
+
+void runInstantiationTests() {
+    BigNum v1("123456789e123456789");
+    cout << "123456789e123456789: " << v1 << endl;
+    
+    BigNum v2("-123456789e123456789");
+    cout << "-123456789e123456789: " << v2 << endl;
+
+    BigNum v3("255");
+    cout << "255: " << v3 << endl;
+
+    BigNum v4("10");
+    cout << "10: " << v4 << endl;
+
+    BigNum v5("0");
+    cout << "0: " << v5 << endl;
+
+    cout << "BigNum::inf(): " << BigNum::inf() << endl;
+}
+
+void runMathTests() {
+    BigNum v1("123456789e123456789");
+    BigNum v2("-123456789e123456789");
+    BigNum v3("255");
+    BigNum v4("10");
+    BigNum v5("0");
+
+    cout << "v1 + v2: " << v1 + v2 << endl;
+    cout << "v1 - v2: " << v1 - v2 << endl;
+    cout << "v1 * v2: " << v1 * v2 << endl;
+    cout << "v1 / v2: " << v1 / v2 << endl;
+
+    cout << "v1 + v3: " << v1 + v3 << endl;
+    cout << "v1 - v3: " << v1 - v3 << endl;
+    cout << "v1 * v3: " << v1 * v3 << endl;
+    cout << "v1 / v3: " << v1 / v3 << endl;
+
+    cout << "v1 + v4: " << v1 + v4 << endl;
+    cout << "v1 - v4: " << v1 - v4 << endl;
+    cout << "v1 * v4: " << v1 * v4 << endl;
+    cout << "v1 / v4: " << v1 / v4 << endl;
+
+    cout << "v1 + v5: " << v1 + v5 << endl;
+    cout << "v1 - v5: " << v1 - v5 << endl;
+    cout << "v1 * v5: " << v1 * v5 << endl;
+    cout << "v1 / v5: " << v1 / v5 << endl;
+}
+
+void runComparisonTests() {
+    BigNum v1("123456789e123456789");
+    BigNum v2("-123456789e123456789");
+    BigNum v3("255");
+    BigNum v4("10");
+    BigNum v5("0");
+
+    cout << "v1 < v2: " << (v1 < v2) << endl;
+    cout << "v1 <= v2: " << (v1 <= v2) << endl;
+    cout << "v1 > v2: " << (v1 > v2) << endl;
+    cout << "v1 >= v2: " << (v1 >= v2) << endl;
+    cout << "v1 == v2: " << (v1 == v2) << endl;
+    cout << "v1 != v2: " << (v1 != v2) << endl;
+
+    cout << "v1 < v3: " << (v1 < v3) << endl;
+    cout << "v1 <= v3: " << (v1 <= v3) << endl;
+    cout << "v1 > v3: " << (v1 > v3) << endl;
+    cout << "v1 >= v3: " << (v1 >= v3) << endl;
+    cout << "v1 == v3: " << (v1 == v3) << endl;
+    cout << "v1 != v3: " << (v1 != v3) << endl;
+
+    cout << "v1 < v4: " << (v1 < v4) << endl;
+    cout << "v1 <= v4: " << (v1 <= v4) << endl;
+    cout << "v1 > v4: " << (v1 > v4) << endl;
+    cout << "v1 >= v4: " << (v1 >= v4) << endl;
+    cout << "v1 == v4: " << (v1 == v4) << endl;
+    cout << "v1 != v4: " << (v1 != v4) << endl;
+
+    cout << "v1 < v5: " << (v1 < v5) << endl;
+    cout << "v1 <= v5: " << (v1 <= v5) << endl;
+    cout << "v1 > v5: " << (v1 > v5) << endl;
+    cout << "v1 >= v5: " << (v1 >= v5) << endl;
+    cout << "v1 == v5: " << (v1 == v5) << endl;
+    cout << "v1 != v5: " << (v1 != v5) << endl;
+}
+
+int main() {
+    runInstantiationTests();
+    runMathTests();
+    runComparisonTests();
+    return 0;
+}
