@@ -102,6 +102,17 @@ void runAdvancedMathTests() {
     cout << "sqrt(64): " << BigNum(64).sqrt() << endl;
     cout << "10^6: " << BigNum(10).pow(6) << endl;
     cout << "sqrt(42^2): " << BigNum(42).pow(2).sqrt() << endl;
+    cout << "27.root(3): " << BigNum(27).root(3) << endl;
+
+    cout << "12345.log10(): ";
+    auto v = BigNum(12345).log10();
+    if (v) { cout << std::to_string(*v); } else { cout << "nullopt"; } 
+    cout << endl;
+    
+    cout << "1.234e1000.log10(): ";
+    auto v2 = BigNum("1.234e1000").log10();
+    if (v2) { cout << std::to_string(*v2); } else { cout << "nullopt"; }
+    cout << endl;
 }
 
 int main() {
