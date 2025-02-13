@@ -117,9 +117,10 @@ public:
         // std::cerr << "Normalizing m=" << m << ",e=" << e << std::endl;
         if (std::isnan(m)) { e = 0; return; }
         if (std::isinf(m)) { e = 0; return; }
-
         if (m == 0) { e = 0; return; }
+        if (std::abs(m) < 1 && e == 0) { m = 0; return; } // Any number less than 1 is considered 0
         
+        // Start normalization
         int n_log = static_cast<int>(std::floor(std::log10(std::abs(m))));
         // std::cerr << "n_log=" << n_log << std::endl;
         m = m / Pow10::get(n_log);
