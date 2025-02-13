@@ -22,13 +22,16 @@ static struct {
     uint max_digits = 10;
 } BigNumContext;
 
-static constexpr int Pow10TableSize = std::numeric_limits<double>::max_digits10;
+static constexpr int Pow10TableOffset = std::numeric_limits<double>::max_exponent10;
+static constexpr int Pow10TableSize = 2 * Pow10TableOffset + 1;
 static constexpr std::array<double, Pow10TableSize> Pow10_generate_table() {
     std::array<double, Pow10TableSize> table{};
-    double value = 1.0;
-    for (int i = 0; i < Pow10TableSize; ++i) {
-        table[i] = value;
-        value *= 10.0;
+    table[Pow10TableOffset] = 1.0;
+    double pos = 1.0;
+    for (int i = 1; i <= Pow10TableOffset; ++i) {
+        pos *= 10.0;
+        table[Pow10TableOffset + i] = pos;      // positive exponents: 10^i
+        table[Pow10TableOffset - i] = 1.0 / pos;  // negative exponents: 10^(-i)
     }
     return table;
 };
@@ -37,14 +40,14 @@ class Pow10 {
 private:
     Pow10() = delete;
 public:
-    static constexpr std::array<double, Pow10TableSize> lookup_table = Pow10_generate_table();
+    static constexpr std::array<double, Pow10TableSize> Pow10Table = Pow10_generate_table();
 
+    // e must be in the range [-offset, offset]
     static constexpr double get(int e) {
-        if (e >= Pow10TableSize) {
+        if (e < -Pow10TableOffset || e > Pow10TableOffset) {
             throw std::overflow_error("Pow10 double overflow");
         }
-        if (e > 0) { return lookup_table[e]; }
-        return 1.0 / lookup_table[-e];
+        return Pow10Table[e + Pow10TableOffset];
     }
 };
 
