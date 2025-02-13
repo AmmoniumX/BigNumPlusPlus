@@ -17,9 +17,11 @@ Tradeoff: Cannot store numbers between (-1, 0) or (0, 1), but those aren't usual
 #include <inttypes.h>
 #include <cassert>
 #include <iostream>
+#include <iomanip>
 
 static struct {
-    uint max_digits = 10;
+    uint max_digits = 10; // Up to how many "real" digits to display before using scientific notation
+    uint print_precision = 2; // How many fractional digits to display on scientific notation
 } BigNumContext;
 
 static constexpr int Pow10TableOffset = std::numeric_limits<double>::max_exponent10;
@@ -295,7 +297,7 @@ public:
     bool operator!=(const intmax_t other) const { return compare(BigNum(other)) != 0; }
 
     // Conversion methods
-    std::string to_string() const {
+    std::string to_string(uint precision=BigNumContext.print_precision) const {
         if (this->is_inf()) { return "inf"; }
         if (this->is_nan()) { return "nan"; }
 
@@ -313,11 +315,11 @@ public:
         }
 
         // Otherwise, use scientific notation
-        std::ostringstream oss;
-        oss << m;
-        if (e != 0) { oss << "e" << e; }
+        std::ostringstream out;
+        out << std::fixed << std::setprecision(precision) << m;
+        if (e != 0) { out << "e" << e; }
 
-        return oss.str();
+        return out.str();
     }
 
     std::optional<intmax_t> to_number() const {
