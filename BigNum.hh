@@ -45,9 +45,9 @@ public:
     static constexpr std::array<double, Pow10TableSize> Pow10Table = Pow10_generate_table();
 
     // e must be in the range [-offset, offset]
-    static constexpr double get(int e) {
+    static constexpr std::optional<double> get(int e) {
         if (e < -Pow10TableOffset || e > Pow10TableOffset) {
-            throw std::overflow_error("Pow10 double overflow");
+            return std::nullopt;
         }
         return Pow10Table[e + Pow10TableOffset];
     }
@@ -123,7 +123,7 @@ public:
         // Start normalization
         int n_log = static_cast<int>(std::floor(std::log10(std::abs(m))));
         // std::cerr << "n_log=" << n_log << std::endl;
-        m = m / Pow10::get(n_log);
+        m = m / (*Pow10::get(n_log));
         e += n_log;
 
         // Any number less than 1 is considered 0
@@ -142,10 +142,10 @@ public:
             m2 = this_is_bigger ? m : b.m;
             e2 = this_is_bigger ? e : b.e;
         } else if (this_is_bigger) {
-            m2 = m * Pow10::get(delta) + b.m;
+            m2 = m * (*Pow10::get(delta)) + b.m;
             e2 = b.e;
         } else {
-            m2 = m + b.m * Pow10::get(delta);
+            m2 = m + b.m * (*Pow10::get(delta));
             e2 = e;
         }
 
@@ -188,10 +188,10 @@ public:
             m = this_is_bigger ? m : b.m;
             e = this_is_bigger ? e : b.e;
         } else if (this_is_bigger) {
-            m = m * Pow10::get(delta) + b.m;
+            m = m * (*Pow10::get(delta)) + b.m;
             e = b.e;
         } else {
-            m = m + b.m * Pow10::get(delta);
+            m = m + b.m * (*Pow10::get(delta));
             // e = e;
         }
         normalize();
@@ -329,7 +329,10 @@ public:
     std::optional<intmax_t> to_number() const {
         int total_digits = e + std::log10(std::abs(m)) + 1;
         if (std::numeric_limits<intmax_t>::max_digits10 < total_digits) { return std::nullopt; }
-        return m * Pow10::get(e);
+
+        auto pow = Pow10::get(e);
+        if (!pow) { return std::nullopt; }
+        return static_cast<intmax_t>(m * (*pow));
     }
 
     // Mathematical operations
