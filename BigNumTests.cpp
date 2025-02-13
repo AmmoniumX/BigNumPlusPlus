@@ -22,6 +22,8 @@ void runInstantiationTests() {
     cout << "0: " << v5 << endl;
 
     cout << "BigNum::inf(): " << BigNum::inf() << endl;
+    
+    cout << "BigNum::nan(): " << BigNum::nan() << endl;
 }
 
 void runMathTests() {

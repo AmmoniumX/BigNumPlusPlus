@@ -1,5 +1,5 @@
 /*
-BigNum: C++ port of https://github.com/veprogames/lua-big-number
+BigNum++: C++ port of https://github.com/veprogames/lua-big-number
 Slightly modified to increase maximum range by moving negative numbers outside of the exponent's range (Emin is 0, therefore Emax is higher)
 Tradeoff: Cannot store numbers between (-1, 0) or (0, 1), but those aren't usually needed in the types of games that would use this library
 */
@@ -59,6 +59,9 @@ public:
     static inline BigNum max() { return BigNum(std::numeric_limits<man_t>::max(), std::numeric_limits<exp_t>::max(), false); }
     static inline BigNum min() { return BigNum(0); }
 
+    man_t getM() const { return m; }
+    exp_t getE() const { return e; }
+
     // Constructors
     BigNum(man_t mantissa = 0, exp_t exponent = 0) : m(mantissa), e(exponent) {
         normalize();
@@ -70,8 +73,15 @@ public:
 
     BigNum(const BigNum& other) : m(other.m), e(other.e) {}
 
+    BigNum& operator=(const BigNum& other) {
+        m = other.m;
+        e = other.e;
+        return *this;
+    }
+
     // Normalization (mantissa set to range [1, 10) )
     void normalize() {
+        // std::cerr << "Normalizing m=" << m << ",e=" << e << std::endl;
         if (std::isnan(m)) { e = 0; return; }
         if (std::isinf(m)) { e = 0; return; }
 
@@ -83,21 +93,29 @@ public:
 
         // Any number less than 1 is considered 0
         m = (std::abs(m) < 1 && e == 0) ? 0 : m;
+        // std::cerr << "After normalization: m=" << m << ",e=" << e << std::endl;
     }
 
     // Arithmetic operations
     BigNum add(const BigNum& b) const {
-        // exp_t delta = b.e - e;
-        // if (delta > 14) return b;
-        // if (delta < -14) return *this;
-        // return BigNum(m + b.m * std::pow(10, delta), e);
-
+        // std::cerr << "Adding m=" << m << ",e=" << e << " and m=" << b.m << ",e=" << b.e << std::endl;
         bool this_is_bigger = e > b.e;
         exp_t delta = this_is_bigger ? e - b.e : b.e - e;
-        if (delta > 14) return this_is_bigger ? *this : b;
-        
-        man_t new_m = this_is_bigger ? m + b.m * std::pow(10, delta) : m * std::pow(10, delta) + b.m;
-        return BigNum(new_m, this_is_bigger ? e : b.e);
+        man_t m2;
+        exp_t e2;
+        if (delta > 14) {
+            m2 = this_is_bigger ? m : b.m;
+            e2 = this_is_bigger ? e : b.e;
+        } else if (this_is_bigger) {
+            m2 = m * std::pow(10, delta) + b.m;
+            e2 = b.e;
+        } else {
+            m2 = m + b.m * std::pow(10, delta);
+            e2 = e;
+        }
+
+        // std::cerr << "Result: " << *this << std::endl;
+        return BigNum(m2, e2);
     }
 
     BigNum sub(const BigNum& b) const {
@@ -109,11 +127,13 @@ public:
     }
 
     BigNum div(const BigNum& b) const {
+        // division by zero, return NaN
         if (b.m == 0) { return nan(); }
-
-        // Any number less than 1 is considered 0
+        // Divisor is larger than dividend, result is 0
         if (b.e > e) { return BigNum(0); }
+        // Any number less than 1 is considered 0
         if (b.e == e && std::abs(m / b.m) < 1) { return BigNum(0); }
+        // Perform division
         return BigNum(m / b.m, e - b.e);
     }
 
@@ -125,20 +145,81 @@ public:
         return mul(BigNum(-1));
     }
 
+    BigNum& operator+=(const BigNum& b) {
+        // std::cerr << "Adding m=" << m << ",e=" << e << " and m=" << b.m << ",e=" << b.e << std::endl;
+        bool this_is_bigger = e > b.e;
+        exp_t delta = this_is_bigger ? e - b.e : b.e - e;
+        if (delta > 14) {
+            m = this_is_bigger ? m : b.m;
+            e = this_is_bigger ? e : b.e;
+        } else if (this_is_bigger) {
+            m = m * std::pow(10, delta) + b.m;
+            e = b.e;
+        } else {
+            m = m + b.m * std::pow(10, delta);
+            // e = e;
+        }
+        normalize();
+        // std::cerr << "Result: " << *this << std::endl;
+        return *this;
+    }
+
+    BigNum& operator*=(const BigNum& b) {
+        m *= b.m;
+        e += b.e;
+        normalize();
+        return *this;
+    }
+
+    BigNum& operator/=(const BigNum& b) {
+        if (b.m == 0) { 
+            // division by zero, return NaN
+            m = nan().m;
+            e = nan().e;
+        } else if (b.e > e) { 
+            // Divisor is larger than dividend, result is 0
+            m = 0;
+            e = 0;
+        } else if (b.e == e && std::abs(m / b.m) < 1) { 
+            // Any number less than 1 is considered 0
+            m = 0;
+            e = 0;
+        } else {
+            // Perform division
+            m /= b.m;
+            e -= b.e;
+        }
+        return *this;
+    }
+
     // Operator overloads
     BigNum operator+(const BigNum& other) const { return add(other); }
     BigNum operator+(const std::string& other) const { return add(BigNum(other)); }
-    BigNum operator+(const intmax_t other) const { return add(BigNum(other)); }
+    BigNum operator+(const intmax_t& other) const { return add(BigNum(other)); }
     BigNum operator-(const BigNum& other) const { return sub(other); }
     BigNum operator-(const std::string& other) const { return sub(BigNum(other)); }
-    BigNum operator-(const intmax_t other) const { return sub(BigNum(other)); }
+    BigNum operator-(const intmax_t& other) const { return sub(BigNum(other)); }
     BigNum operator*(const BigNum& other) const { return mul(other); }
     BigNum operator*(const std::string& other) const { return mul(BigNum(other)); }
-    BigNum operator*(const intmax_t other) const { return mul(BigNum(other)); }
+    BigNum operator*(const intmax_t& other) const { return mul(BigNum(other)); }
     BigNum operator/(const BigNum& other) const { return div(other); }
     BigNum operator/(const std::string& other) const { return div(BigNum(other)); }
-    BigNum operator/(const intmax_t other) const { return div(BigNum(other)); }
+    BigNum operator/(const intmax_t& other) const { return div(BigNum(other)); }
     BigNum operator-() const { return negate(); }
+    BigNum& operator+=(const std::string& b) { return *this += BigNum(b); }
+    BigNum& operator+=(const intmax_t& b) { return *this += BigNum(b); }
+    BigNum& operator-=(const BigNum& b) { return *this += BigNum(b.m * -1, b.e); }
+    BigNum& operator-=(const std::string& b) { return *this -= BigNum(b); }
+    BigNum& operator-=(const intmax_t& b) { return *this -= BigNum(b); }
+    BigNum& operator*=(const std::string& b) { return *this *= BigNum(b); }
+    BigNum& operator*=(const intmax_t& b) { return *this *= BigNum(b); }
+    BigNum& operator/=(const std::string& b) { return *this /= BigNum(b); }
+    BigNum& operator/=(const intmax_t& b) { return *this /= BigNum(b); }
+    BigNum& operator++() { return *this += BigNum(1); }
+    BigNum operator++(int) { BigNum temp(*this); *this += BigNum(1); return temp; }
+    BigNum& operator--() { return *this -= BigNum(1); }
+    BigNum operator--(int) { BigNum temp(*this); *this -= BigNum(1); return temp; }
+
 
     // Comparison operations
     bool is_positive() const { return m >= 0; }
