@@ -19,10 +19,11 @@ Tradeoff: Cannot store numbers between (-1, 0) or (0, 1), but those aren't usual
 #include <iostream>
 #include <iomanip>
 
-inline struct {
+struct BigNumContext {
     uint max_digits = 10; // Up to how many "real" digits to display before using scientific notation
     uint print_precision = 2; // How many fractional digits to display on scientific notation
-} BigNumContext;
+};
+inline BigNumContext DefaultBigNumContext;
 
 static constexpr int Pow10TableOffset = std::numeric_limits<double>::max_exponent10;
 static constexpr int Pow10TableSize = 2 * Pow10TableOffset + 1;
@@ -331,13 +332,13 @@ public:
     bool operator!=(const intmax_t other) const { return compare(BigNum(other)) != 0; }
 
     // Conversion methods
-    std::string to_string(uint precision=BigNumContext.print_precision) const {
+    std::string to_string(uint precision=DefaultBigNumContext.print_precision) const {
         if (this->is_inf()) { return "inf"; }
         if (this->is_nan()) { return "nan"; }
 
         // Can this number be fully displayed as a string <= max_digits long?
         // Assumes m and e are already normalized
-        uint max_digits = std::max(precision+1, BigNumContext.max_digits);
+        uint max_digits = std::max(precision+1, DefaultBigNumContext.max_digits);
         if (this->e < max_digits - 1) {
             std::string str = std::to_string(m);
             exp_t newLen = std::min(static_cast<exp_t>(max_digits), e + 1 ) + (str[0] == '-' ? 1 : 0);
