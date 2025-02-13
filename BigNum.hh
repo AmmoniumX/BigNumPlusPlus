@@ -19,7 +19,7 @@ Tradeoff: Cannot store numbers between (-1, 0) or (0, 1), but those aren't usual
 #include <iostream>
 #include <iomanip>
 
-static struct {
+inline struct {
     uint max_digits = 10; // Up to how many "real" digits to display before using scientific notation
     uint print_precision = 2; // How many fractional digits to display on scientific notation
 } BigNumContext;
