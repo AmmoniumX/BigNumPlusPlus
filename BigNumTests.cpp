@@ -97,9 +97,17 @@ void runComparisonTests() {
     cout << "v1 != v5: " << (v1 != v5) << endl;
 }
 
+void runAdvancedMathTests() {
+    cout << "16^2: " << BigNum(16).pow(2) << endl;
+    cout << "sqrt(64): " << BigNum(64).sqrt() << endl;
+    cout << "10^6: " << BigNum(10).pow(6) << endl;
+    cout << "sqrt(42^2): " << BigNum(42).pow(2).sqrt() << endl;
+}
+
 int main() {
     runInstantiationTests();
     runMathTests();
     runComparisonTests();
+    runAdvancedMathTests();
     return 0;
 }

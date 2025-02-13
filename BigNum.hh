@@ -324,6 +324,7 @@ public:
         return out.str();
     }
 
+    // Returns number as intmax_t, or nullopt if the number is too large
     std::optional<intmax_t> to_number() const {
         int total_digits = e + std::log10(std::abs(m)) + 1;
         if (std::numeric_limits<intmax_t>::max_digits10 < total_digits) { return std::nullopt; }
@@ -331,11 +332,14 @@ public:
     }
 
     // Mathematical operations
-    std::optional<exp_t> log10() const {
-        if (std::numeric_limits<exp_t>::max() - e < std::log10(m)) { return std::nullopt; }
+
+    // Returns log10(num), or nullopt if the result would be too large
+    std::optional<double> log10() const {
+        if (std::numeric_limits<double>::max() - e < std::log10(m)) { return std::nullopt; }
         return e + std::log10(m);
     }
 
+    // Returns num^power
     BigNum pow(intmax_t power) const {
         // Special cases
         if (power == 0) { return BigNum(1); }
@@ -353,6 +357,7 @@ public:
         // Calculate using logarithms
         auto log = log10();
         if (!log) { return BigNum(0); }
+        // std::cerr << "log: " << std::to_string(*log) << std::endl;
         
         // Handle negative powers
         bool is_negative = power < 0;
@@ -360,27 +365,62 @@ public:
         
         // Calculate new logarithm
         double new_log = static_cast<double>(*log) * abs_power;
+        // std::cerr << "new_log: " << std::to_string(new_log) << std::endl;
         
         // If power was negative, invert the result
         if (is_negative) { new_log = -new_log; }
 
         // Check if result would be too small
         if (std::abs(new_log) < std::numeric_limits<double>::min_exponent10) {
-            return BigNum(0, 0);
+            return BigNum(0);
         }
 
         // Split into mantissa and exponent
-        man_t mantissa = static_cast<man_t>(Pow10::get(static_cast<uint>(std::fmod(new_log, 1.0))));
-        exp_t exponent = static_cast<exp_t>(std::floor(new_log));
+        man_t m2 = static_cast<man_t>(std::pow(10, std::fmod(new_log, 1.0)));
+        exp_t e2 = static_cast<exp_t>(std::floor(new_log));
 
-        return BigNum(mantissa, exponent);
+        // std::cerr << "m=" << std::to_string(m2) << ",e=" << std::to_string(e2) << std::endl;
+        return BigNum(m2, e2);
     }
 
+    // Returns num^(1/root), effectively computing nth root
+    BigNum root(intmax_t n) const { 
+        if (n == 0) { throw std::domain_error("Cannot take the zeroth root"); } // Handle zero early 
+        if (m == 0) { return BigNum(0); }
+        // Handle negative numbers: Only allow odd roots for negative bases
+        bool is_negative = (m < 0);
+        if (is_negative) {
+            if (n % 2 == 0) {
+                throw std::domain_error("Even root of a negative number is not defined");
+            }
+        }
+
+        // Compute log10(|num|) = log10(|m|) + e
+        double abs_log = std::log10(std::abs(m)) + e;
+        // The new logarithm for the x-th root
+        double new_log = abs_log / static_cast<double>(n);
+
+        // Split new_log into its integer part (new exponent) and fractional part
+        exp_t new_e = static_cast<exp_t>(std::floor(new_log));
+        double fractional = new_log - std::floor(new_log);
+        // Compute the new mantissa from the fractional part
+        man_t new_m = std::pow(10.0, fractional);
+
+        // For negative bases with an odd root, the result should be negative
+        if (is_negative) {
+            new_m = -new_m;
+        }
+
+        return BigNum(new_m, new_e);
+    }
+
+    // Returns e^num
     static BigNum exp(exp_t n) {
         return BigNum(std::exp(1)).pow(n);
     }
 
-    BigNum sqrt() const { return pow(0.5); }
+    // Returns the square root of num
+    BigNum sqrt() const { return root(2); }
     
 };
 
