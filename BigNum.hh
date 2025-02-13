@@ -383,7 +383,7 @@ public:
         return BigNum(m2, e2);
     }
 
-    // Returns num^(1/root), effectively computing nth root
+    // Returns num^(1/n), aka the nth root
     BigNum root(intmax_t n) const { 
         if (n == 0) { throw std::domain_error("Cannot take the zeroth root"); } // Handle zero early 
         if (m == 0) { return BigNum(0); }
