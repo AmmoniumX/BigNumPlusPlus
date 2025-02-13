@@ -22,8 +22,9 @@ void runInstantiationTests() {
     cout << "0: " << v5 << endl;
 
     cout << "BigNum::inf(): " << BigNum::inf() << endl;
-    
     cout << "BigNum::nan(): " << BigNum::nan() << endl;
+    cout << "BigNum::max(): " << BigNum::max() << endl;
+    cout << "BigNum::min(): " << BigNum::min() << endl;
 }
 
 void runMathTests() {
@@ -108,7 +109,7 @@ void runAdvancedMathTests() {
     auto v = BigNum(12345).log10();
     if (v) { cout << std::to_string(*v); } else { cout << "nullopt"; } 
     cout << endl;
-    
+
     cout << "1.234e1000.log10(): ";
     auto v2 = BigNum("1.234e1000").log10();
     if (v2) { cout << std::to_string(*v2); } else { cout << "nullopt"; }

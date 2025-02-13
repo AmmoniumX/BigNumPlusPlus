@@ -65,6 +65,19 @@ private:
     exp_t e;
     static inline man_t strtom(const std::string str) { return std::stod(str); }
     static inline exp_t strtoe(const std::string str) { return strtoumax(str.c_str(), nullptr, 10); }
+    static std::string to_string_full(double value) {
+        std::ostringstream out;
+        out << std::setprecision(std::numeric_limits<double>::max_digits10) << value;
+        return out.str();
+    }
+    static std::string to_string_floor(double value, int precision) {
+        double scale = std::pow(10.0, precision);
+        double truncated_value = std::floor(value * scale) / scale;
+    
+        std::ostringstream out;
+        out << std::fixed << std::setprecision(precision) << truncated_value;
+        return out.str();
+    }
     
     BigNum(man_t mantissa, exp_t exponent, bool normalize) : m(mantissa), e(exponent) {
         if (normalize) this->normalize();
@@ -86,16 +99,32 @@ private:
         }
     }
 
+    void set(const BigNum& other) {
+        m = other.m;
+        e = other.e;
+    }
+
 public:
-    static inline BigNum inf() { return BigNum(std::numeric_limits<double>::infinity(), 0); }
-    static inline BigNum nan() { return BigNum(std::numeric_limits<double>::quiet_NaN(), 0); }
-    static inline BigNum max() { return BigNum(std::numeric_limits<man_t>::max(), std::numeric_limits<exp_t>::max(), false); }
-    static inline BigNum min() { return BigNum(0); }
+    static inline const BigNum& inf() { 
+        static const BigNum inf_val(std::numeric_limits<double>::infinity(), 0, false); 
+        return inf_val;
+    }
+    static inline const BigNum& nan() { 
+        static const BigNum nan_val(std::numeric_limits<double>::quiet_NaN(), 0, false); 
+        return nan_val;
+    }
+    static inline const BigNum& max() { 
+        static const BigNum max_val(std::nextafter(10.0, 0.0), std::numeric_limits<exp_t>::max(), false); 
+        return max_val;
+    }
+    static inline const BigNum& min() { 
+        static const BigNum min_val(0, 0, false); 
+        return min_val;
+    }
 
     man_t getM() const { return m; }
     exp_t getE() const { return e; }
 
-    // Constructors
     BigNum(man_t mantissa = 0, exp_t exponent = 0) : m(mantissa), e(exponent) {
         normalize();
     }
@@ -107,14 +136,14 @@ public:
     BigNum(const BigNum& other) : m(other.m), e(other.e) {}
 
     BigNum& operator=(const BigNum& other) {
-        m = other.m;
-        e = other.e;
+        set(other);
         return *this;
     }
 
     // Normalization (mantissa set to range [1, 10) )
     void normalize() {
         // std::cerr << "Normalizing m=" << m << ",e=" << e << std::endl;
+        if (*this == max() || *this == min()) { return; }
         if (std::isnan(m)) { e = 0; return; }
         if (std::isinf(m)) { e = 0; return; }
         if (m == 0) { e = 0; return; }
@@ -128,6 +157,10 @@ public:
 
         // Any number less than 1 is considered 0
         m = (std::abs(m) < 1 && e == 0) ? 0 : m;
+
+        // Clamp between max and min
+        if (*this > max()) { set(max()); }
+        if (*this < min()) { set(min()); }
         // std::cerr << "After normalization: m=" << m << ",e=" << e << std::endl;
     }
 
@@ -319,7 +352,16 @@ public:
 
         // Otherwise, use scientific notation
         std::ostringstream out;
-        out << std::fixed << std::setprecision(precision) << m;
+        // out << std::fixed << std::setprecision(precision) << m;
+        std::string m_str = to_string_floor(m, 2);
+
+        // Trim the result to the desired precision
+        size_t dot_pos = m_str.find('.');
+        if (dot_pos != std::string::npos && dot_pos + precision + 1 < m_str.size()) {
+            m_str = m_str.substr(0, dot_pos + precision + 1);
+        }
+        out << m_str;
+
         if (e != 0) { out << "e" << e; }
 
         return out.str();
