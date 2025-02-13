@@ -61,6 +61,13 @@ void runComparisonTests() {
     BigNum v4("10");
     BigNum v5("0");
 
+    cout << "v1 < v1: " << (v1 < v1) << endl;
+    cout << "v1 <= v1: " << (v1 <= v1) << endl;
+    cout << "v1 > v1: " << (v1 > v1) << endl;
+    cout << "v1 >= v1: " << (v1 >= v1) << endl;
+    cout << "v1 == v1: " << (v1 == v1) << endl;
+    cout << "v1 != v1: " << (v1 != v1) << endl;
+
     cout << "v1 < v2: " << (v1 < v2) << endl;
     cout << "v1 <= v2: " << (v1 <= v2) << endl;
     cout << "v1 > v2: " << (v1 > v2) << endl;
