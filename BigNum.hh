@@ -229,26 +229,26 @@ public:
     // Operator overloads
     BigNum operator+(const BigNum& other) const { return add(other); }
     BigNum operator+(const std::string& other) const { return add(BigNum(other)); }
-    BigNum operator+(const intmax_t& other) const { return add(BigNum(other)); }
+    BigNum operator+(const intmax_t other) const { return add(BigNum(other)); }
     BigNum operator-(const BigNum& other) const { return sub(other); }
     BigNum operator-(const std::string& other) const { return sub(BigNum(other)); }
-    BigNum operator-(const intmax_t& other) const { return sub(BigNum(other)); }
+    BigNum operator-(const intmax_t other) const { return sub(BigNum(other)); }
     BigNum operator*(const BigNum& other) const { return mul(other); }
     BigNum operator*(const std::string& other) const { return mul(BigNum(other)); }
-    BigNum operator*(const intmax_t& other) const { return mul(BigNum(other)); }
+    BigNum operator*(const intmax_t other) const { return mul(BigNum(other)); }
     BigNum operator/(const BigNum& other) const { return div(other); }
     BigNum operator/(const std::string& other) const { return div(BigNum(other)); }
-    BigNum operator/(const intmax_t& other) const { return div(BigNum(other)); }
+    BigNum operator/(const intmax_t other) const { return div(BigNum(other)); }
     BigNum operator-() const { return negate(); }
     BigNum& operator+=(const std::string& b) { return *this += BigNum(b); }
-    BigNum& operator+=(const intmax_t& b) { return *this += BigNum(b); }
+    BigNum& operator+=(const intmax_t b) { return *this += BigNum(b); }
     BigNum& operator-=(const BigNum& b) { return *this += BigNum(b.m * -1, b.e); }
     BigNum& operator-=(const std::string& b) { return *this -= BigNum(b); }
-    BigNum& operator-=(const intmax_t& b) { return *this -= BigNum(b); }
+    BigNum& operator-=(const intmax_t b) { return *this -= BigNum(b); }
     BigNum& operator*=(const std::string& b) { return *this *= BigNum(b); }
-    BigNum& operator*=(const intmax_t& b) { return *this *= BigNum(b); }
+    BigNum& operator*=(const intmax_t b) { return *this *= BigNum(b); }
     BigNum& operator/=(const std::string& b) { return *this /= BigNum(b); }
-    BigNum& operator/=(const intmax_t& b) { return *this /= BigNum(b); }
+    BigNum& operator/=(const intmax_t b) { return *this /= BigNum(b); }
     BigNum& operator++() { return *this += BigNum(1); }
     BigNum operator++(int) { BigNum temp(*this); *this += BigNum(1); return temp; }
     BigNum& operator--() { return *this -= BigNum(1); }
