@@ -11,14 +11,42 @@ Tradeoff: Cannot store numbers between (-1, 0) or (0, 1), but those aren't usual
 #include <string>
 #include <optional>
 #include <sstream>
+#include <array>
 #include <limits>
 #include <cstdint>
 #include <inttypes.h>
 #include <cassert>
+#include <iostream>
 
 static struct {
     uint max_digits = 10;
 } BigNumContext;
+
+constexpr int Pow10TableSize = std::numeric_limits<double>::max_digits10;
+constexpr std::array<double, Pow10TableSize> Pow10_generate_table() {
+    std::array<double, Pow10TableSize> table{};
+    double value = 1.0;
+    for (int i = 0; i < Pow10TableSize; ++i) {
+        table[i] = value;
+        value *= 10.0;
+    }
+    return table;
+}
+
+class Pow10 {
+private:
+    Pow10() = delete;
+public:
+    static constexpr std::array<double, Pow10TableSize> lookup_table = Pow10_generate_table();
+
+    static constexpr double get(int e) {
+        if (e >= Pow10TableSize) {
+            throw std::overflow_error("Pow10 double overflow");
+        }
+        if (e > 0) { return lookup_table[e]; }
+        return 1.0 / lookup_table[-e];
+    }
+};
 
 class BigNum {
     using man_t = double;
@@ -88,7 +116,8 @@ public:
         if (m == 0) { e = 0; return; }
         
         int n_log = static_cast<int>(std::floor(std::log10(std::abs(m))));
-        m = m / std::pow(10, n_log);
+        // std::cerr << "n_log=" << n_log << std::endl;
+        m = m / Pow10::get(n_log);
         e += n_log;
 
         // Any number less than 1 is considered 0
@@ -107,10 +136,10 @@ public:
             m2 = this_is_bigger ? m : b.m;
             e2 = this_is_bigger ? e : b.e;
         } else if (this_is_bigger) {
-            m2 = m * std::pow(10, delta) + b.m;
+            m2 = m * Pow10::get(delta) + b.m;
             e2 = b.e;
         } else {
-            m2 = m + b.m * std::pow(10, delta);
+            m2 = m + b.m * Pow10::get(delta);
             e2 = e;
         }
 
@@ -153,10 +182,10 @@ public:
             m = this_is_bigger ? m : b.m;
             e = this_is_bigger ? e : b.e;
         } else if (this_is_bigger) {
-            m = m * std::pow(10, delta) + b.m;
+            m = m * Pow10::get(delta) + b.m;
             e = b.e;
         } else {
-            m = m + b.m * std::pow(10, delta);
+            m = m + b.m * Pow10::get(delta);
             // e = e;
         }
         normalize();
@@ -289,7 +318,7 @@ public:
     std::optional<intmax_t> to_number() const {
         int total_digits = e + std::log10(std::abs(m)) + 1;
         if (std::numeric_limits<intmax_t>::max_digits10 < total_digits) { return std::nullopt; }
-        return m * std::pow(10, e);
+        return m * Pow10::get(e);
     }
 
     // Mathematical operations
@@ -332,7 +361,7 @@ public:
         }
 
         // Split into mantissa and exponent
-        man_t mantissa = static_cast<man_t>(std::pow(10, std::fmod(new_log, 1.0)));
+        man_t mantissa = static_cast<man_t>(Pow10::get(static_cast<uint>(std::fmod(new_log, 1.0))));
         exp_t exponent = static_cast<exp_t>(std::floor(new_log));
 
         return BigNum(mantissa, exponent);
