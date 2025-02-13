@@ -258,6 +258,8 @@ public:
     bool is_negative() const { return m < 0; }
     bool is_inf() const { return std::isinf(m); }
     bool is_nan() const { return std::isnan(m); }
+    static inline BigNum& max(BigNum& a, BigNum& b) { return a > b ? a : b; }
+    static inline BigNum& min(BigNum& a, BigNum& b) { return a < b ? a : b; }
 
     int compare(const BigNum& b) const {
         if (m == b.m && e == b.e) return 0;
