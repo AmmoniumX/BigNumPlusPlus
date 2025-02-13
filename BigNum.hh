@@ -22,8 +22,8 @@ static struct {
     uint max_digits = 10;
 } BigNumContext;
 
-constexpr int Pow10TableSize = std::numeric_limits<double>::max_digits10;
-constexpr std::array<double, Pow10TableSize> Pow10_generate_table() {
+static constexpr int Pow10TableSize = std::numeric_limits<double>::max_digits10;
+static constexpr std::array<double, Pow10TableSize> Pow10_generate_table() {
     std::array<double, Pow10TableSize> table{};
     double value = 1.0;
     for (int i = 0; i < Pow10TableSize; ++i) {
@@ -31,7 +31,7 @@ constexpr std::array<double, Pow10TableSize> Pow10_generate_table() {
         value *= 10.0;
     }
     return table;
-}
+};
 
 class Pow10 {
 private:
