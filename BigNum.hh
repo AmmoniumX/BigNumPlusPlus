@@ -301,10 +301,12 @@ public:
         if (this->is_inf()) { return "inf"; }
         if (this->is_nan()) { return "nan"; }
 
-        // Can this number be fully represented as a string <= max_digits long?
-        if (this->e < BigNumContext.max_digits - 1) {
+        // Can this number be fully displayed as a string <= max_digits long?
+        // Assumes m and e are already normalized
+        uint max_digits = std::max(precision+1, BigNumContext.max_digits);
+        if (this->e < max_digits - 1) {
             std::string str = std::to_string(m);
-            exp_t newLen = std::min(static_cast<exp_t>(BigNumContext.max_digits), e + 1 ) + (str[0] == '-' ? 1 : 0);
+            exp_t newLen = std::min(static_cast<exp_t>(max_digits), e + 1 ) + (str[0] == '-' ? 1 : 0);
             str.erase(std::remove_if(str.begin(), str.end(), [](char c) { return c == '.'; }), str.end());
             if (str.length() < newLen) {
                 str += std::string(newLen - str.length(), '0');
