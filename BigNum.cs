@@ -182,7 +182,7 @@ namespace BigNumLibrary
         public static BigNum Inf => new BigNum(double.PositiveInfinity, 0, false);
         public static BigNum NaN => new BigNum(double.NaN, 0, false);
         public static BigNum Max => new BigNum(Math.BitDecrement(10.0), ulong.MaxValue, false);
-        public static BigNum Min => new BigNum(0.0, 0, false);
+        public static BigNum Min => new BigNum(Math.BitIncrement(-10.0), 0, false);
 
         // Arithmetic operations
         public BigNum Add(BigNum b)

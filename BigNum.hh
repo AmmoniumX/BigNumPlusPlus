@@ -72,12 +72,24 @@ private:
         return out.str();
     }
     static std::string to_string_floor(double value, int precision) {
+        // Assumes value is normalized to 1 digit before the decimal point (|value| < 10)
+        assert(value > -10 && value < 10 && "Value must be normalized");
         double scale = std::pow(10.0, precision);
         double truncated_value = std::floor(value * scale) / scale;
     
         std::ostringstream out;
         out << std::fixed << std::setprecision(precision) << truncated_value;
-        return out.str();
+        std::string out_str = out.str();
+
+        // If necessary, round down to always return 1 digit before the decimal point
+        // This is to avoid rounding errors when the number is close to 10
+        // Should always be correct given our assumption that |value| < 10
+        if (out_str.substr(0, 3) == "10.") {
+            out_str = "9." + std::string(precision, '9');
+        } else if (out_str.substr(0, 4) == "-10.") {
+            out_str = "-9." + std::string(precision, '9');
+        }
+        return out_str;
     }
     
     BigNum(man_t mantissa, exp_t exponent, bool normalize) : m(mantissa), e(exponent) {
@@ -115,11 +127,11 @@ public:
         return nan_val;
     }
     static inline const BigNum& max() { 
-        static const BigNum max_val(std::nextafter(10.0, 0.0), std::numeric_limits<exp_t>::max(), false); 
+        static const BigNum max_val(std::nextafter(10.0, 0), std::numeric_limits<exp_t>::max(), false); 
         return max_val;
     }
     static inline const BigNum& min() { 
-        static const BigNum min_val(0, 0, false); 
+        static const BigNum min_val(std::nextafter(-10.0, 0), std::numeric_limits<exp_t>::max(), false); 
         return min_val;
     }
 
@@ -141,7 +153,7 @@ public:
         return *this;
     }
 
-    // Normalization (mantissa set to range [1, 10) )
+    // Normalization: mantissa set in range (-10, 1] and [1, 10)
     void normalize() {
         // std::cerr << "Normalizing m=" << m << ",e=" << e << std::endl;
         if (*this == max() || *this == min()) { return; }
@@ -302,8 +314,10 @@ public:
         if (m == b.m && e == b.e) return 0;
         if (is_positive() && b.is_negative()) return 1;
         if (is_negative() && b.is_positive()) return -1;
-        if (e > b.e) return 1;
-        if (e < b.e) return -1;
+        if (is_positive() && b.is_positive() && e > b.e) return 1;
+        if (is_positive() && b.is_positive() && e < b.e) return -1;
+        if (is_negative() && b.is_negative() && e > b.e) return -1;
+        if (is_negative() && b.is_negative() && e < b.e) return 1;
         if (is_positive() && m > b.m) return 1;
         if (is_positive() && m < b.m) return -1;
         if (is_negative() && m > b.m) return -1;
@@ -354,13 +368,21 @@ public:
         // Otherwise, use scientific notation
         std::ostringstream out;
         // out << std::fixed << std::setprecision(precision) << m;
-        std::string m_str = to_string_floor(m, 2);
-
+        
+        // Handle max() and min() specifically due to rounding issues
+        // std::string m_str;
+        // if (*this == max()) { m_str = std::string("9.") + std::string(precision, '9'); }
+        // else if (*this == min()) { m_str = std::string("-9.") + std::string(precision, '9'); }
+        // else { m_str = to_string_floor(m, precision); }
+        // std::cerr << "m_str: " << m_str << std::endl;
+        
         // Trim the result to the desired precision
-        size_t dot_pos = m_str.find('.');
-        if (dot_pos != std::string::npos && dot_pos + precision + 1 < m_str.size()) {
-            m_str = m_str.substr(0, dot_pos + precision + 1);
-        }
+        // std::string m_str = to_string_floor(m, 2);
+        // size_t dot_pos = m_str.find('.');
+        // if (dot_pos != std::string::npos && dot_pos + precision + 1 < m_str.size()) {
+            //     m_str = m_str.substr(0, dot_pos + precision + 1);
+            // }
+        std::string m_str = to_string_floor(m, precision);
         out << m_str;
 
         if (e != 0) { out << "e" << e; }
