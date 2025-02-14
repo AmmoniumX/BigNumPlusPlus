@@ -146,12 +146,11 @@ public:
         parseStr(str);
     }
 
-    BigNum(const BigNum& other) : m(other.m), e(other.e) {}
+    BigNum(const BigNum& other) = default;
 
-    BigNum& operator=(const BigNum& other) {
-        set(other);
-        return *this;
-    }
+    BigNum& operator=(const BigNum& other) = default;
+
+    ~BigNum() = default;
 
     // Normalization: mantissa set in range (-10, 1] and [1, 10)
     void normalize() {
