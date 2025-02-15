@@ -389,13 +389,24 @@ public:
         return out.str();
     }
 
+    // Serialize with constant precision
+    std::string serialize() const {
+        return to_string(9);
+    }
+
     // Returns number as intmax_t, or nullopt if the number is too large
     std::optional<intmax_t> to_number() const {
         int total_digits = e + std::log10(std::abs(m)) + 1;
-        if (std::numeric_limits<intmax_t>::max_digits10 < total_digits) { return std::nullopt; }
+        if (total_digits > std::numeric_limits<intmax_t>::digits10) { 
+            // std::cerr << "Number is too large to convert to intmax_t: " << this->to_string() << std::endl;
+            return std::nullopt; 
+        }
 
         auto pow = Pow10::get(e);
-        if (!pow) { return std::nullopt; }
+        if (!pow) { 
+            // std::cerr << "Pow out of bounds" << std::endl;
+            return std::nullopt; 
+        }
         return static_cast<intmax_t>(m * (*pow));
     }
 
