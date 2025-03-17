@@ -419,7 +419,7 @@ public:
     }
 
     // Returns num^power
-    BigNum pow(intmax_t power) const {
+    BigNum pow_int(intmax_t power) const {
         // Special cases
         if (power == 0) { return BigNum(1); }
         if (m == 0) {
@@ -429,8 +429,8 @@ public:
 
         // When the mantissa is negative
         if (m < 0) {
-            if (power % 2 == 0) { return BigNum(-m, e).pow(power); } // Even power of negative number is positive
-            return BigNum(-m, e).pow(power).negate(); // Odd power of negative number is negative
+            if (power % 2 == 0) { return BigNum(-m, e).pow_int(power); } // Even power of negative number is positive
+            return BigNum(-m, e).pow_int(power).negate(); // Odd power of negative number is negative
         }
 
         // Calculate using logarithms
@@ -459,6 +459,47 @@ public:
         exp_t e2 = static_cast<exp_t>(std::floor(new_log));
 
         // std::cerr << "m=" << std::to_string(m2) << ",e=" << std::to_string(e2) << std::endl;
+        return BigNum(m2, e2);
+    }
+
+    // Returns num^power where power is a double
+    BigNum pow_float(double power) const {
+        // Special cases
+        if (power == 0.0) { return BigNum(1); }
+        if (m == 0) {
+            if (power < 0) { throw std::domain_error("Cannot raise 0 to a negative power"); }
+            return BigNum(0);
+        }
+
+        // When the mantissa is negative
+        if (m < 0) {
+            // For non-integer powers of negative numbers, result is complex (not supported)
+            if (std::floor(power) != power) {
+                throw std::domain_error("Non-integer powers of negative numbers result in complex values");
+            }
+            
+            if (std::fmod(power, 2.0) == 0.0) { 
+                return BigNum(-m, e).pow_float(power); // Even power of negative number is positive
+            }
+            return BigNum(-m, e).pow_float(power).negate(); // Odd power of negative number is negative
+        }
+
+        // Calculate using logarithms
+        auto log = log10();
+        if (!log) { return BigNum(0); }
+        
+        // Calculate new logarithm
+        double new_log = static_cast<double>(*log) * power;
+        
+        // Check if result would be too small
+        if (std::abs(new_log) < std::numeric_limits<double>::min_exponent10) {
+            return BigNum(0);
+        }
+
+        // Split into mantissa and exponent
+        man_t m2 = static_cast<man_t>(std::pow(10, std::fmod(new_log, 1.0)));
+        exp_t e2 = static_cast<exp_t>(std::floor(new_log));
+
         return BigNum(m2, e2);
     }
 
@@ -495,7 +536,7 @@ public:
 
     // Returns e^num
     static BigNum exp(exp_t n) {
-        return BigNum(std::exp(1)).pow(n);
+        return BigNum(std::exp(1)).pow_int(static_cast<intmax_t>(n));
     }
 
     // Returns the square root of num
