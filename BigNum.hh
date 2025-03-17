@@ -500,7 +500,7 @@ public:
 
     // Returns e^num
     static BigNum exp(exp_t n) {
-        return BigNum(std::exp(1)).pow_int(static_cast<intmax_t>(n));
+        return BigNum(std::exp(1)).pow(static_cast<intmax_t>(n));
     }
 
     // Returns the square root of num
