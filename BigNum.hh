@@ -18,6 +18,8 @@ Tradeoff: Cannot store numbers between (-1, 0) or (0, 1), but those aren't usual
 #include <cassert>
 #include <iostream>
 #include <iomanip>
+#include <concepts>
+#include <type_traits>
 
 struct BigNumContext {
     uint max_digits = 10; // Up to how many "real" digits to display before using scientific notation
@@ -62,16 +64,25 @@ class BigNum {
     friend std::istream& operator>>(std::istream& is, BigNum& bn);
 
 private:
-    man_t m;
-    exp_t e;
-    static inline man_t strtom(const std::string str) { return std::stod(str); }
-    static inline exp_t strtoe(const std::string str) { return strtoumax(str.c_str(), nullptr, 10); }
-    static std::string to_string_full(double value) {
+    man_t m = 0;
+    exp_t e = 0;
+    static_assert(std::is_floating_point_v<man_t>, "mantissa must be a floating point type");
+    static_assert(std::is_unsigned_v<exp_t>, "exponent must be an unsigned type");
+
+    static inline man_t strtom(const std::string &str) { 
+        static_assert(std::is_same_v<man_t, double>, "strtom must be specialized for the mantissa type");
+        return std::stod(str); 
+    }
+    static inline exp_t strtoe(const std::string &str) { 
+        static_assert(std::is_same_v<exp_t, uintmax_t>, "strtoe must be specialized for the exponent type");
+        return strtoumax(str.c_str(), nullptr, 10); 
+    }
+    static std::string to_string_full(const double &value) {
         std::ostringstream out;
         out << std::setprecision(std::numeric_limits<double>::max_digits10) << value;
         return out.str();
     }
-    static std::string to_string_floor(double value, int precision) {
+    static std::string to_string_floor(const double &value, const int &precision) {
         // Assumes value is normalized to 1 digit before the decimal point (|value| < 10)
         assert(value > -10 && value < 10 && "Value must be normalized");
         double scale = std::pow(10.0, precision);
@@ -92,7 +103,7 @@ private:
         return out_str;
     }
     
-    BigNum(man_t mantissa, exp_t exponent, bool normalize) : m(mantissa), e(exponent) {
+    BigNum(const man_t mantissa, const exp_t exponent, const bool normalize) : m(mantissa), e(exponent) {
         if (normalize) this->normalize();
     }
 
@@ -138,7 +149,7 @@ public:
     man_t getM() const { return m; }
     exp_t getE() const { return e; }
 
-    BigNum(man_t mantissa = 0, exp_t exponent = 0) : m(mantissa), e(exponent) {
+    BigNum(const man_t mantissa, const exp_t exponent = 0) : m(mantissa), e(exponent) {
         normalize();
     }
 
@@ -146,11 +157,17 @@ public:
         parseStr(str);
     }
 
-    BigNum(const BigNum& other) = default;
+    // Default methods to satisfy concepts
+    BigNum() : m(0), e(0) { normalize(); } // Default constructor
+    BigNum(const BigNum&) = default; // Copy constructor
+    BigNum& operator=(const BigNum&) = default; // Copy assignment
+    BigNum(BigNum&&) = default; // Move constructor
+    BigNum& operator=(BigNum&&) = default; // Move assignment
 
-    BigNum& operator=(const BigNum& other) = default;
+    // Equality operator (only use this under the assumption that the numbers are already normalized)
+    bool operator==(const BigNum& other) const = default; 
 
-    ~BigNum() = default;
+    ~BigNum() = default; // Destructor
 
     // Normalization: mantissa set in range (-10, 1] and [1, 10)
     void normalize() {
@@ -310,6 +327,11 @@ public:
     static inline BigNum& min(BigNum& a, BigNum& b) { return a < b ? a : b; }
 
     int compare(const BigNum& b) const {
+
+        // We do not need to normalize here, as we assume the numbers are already normalized
+        // BigNum a = *this; a.normalize();
+        // b.normalize();
+
         if (m == b.m && e == b.e) return 0;
         if (is_positive() && b.is_negative()) return 1;
         if (is_negative() && b.is_positive()) return -1;
@@ -337,7 +359,7 @@ public:
     bool operator>=(const BigNum& other) const { return compare(other) >= 0; }
     bool operator>=(const std::string& other) const { return compare(BigNum(other)) >= 0; }
     bool operator>=(const intmax_t other) const { return compare(BigNum(other)) >= 0; }
-    bool operator==(const BigNum& other) const { return compare(other) == 0; }
+    // bool operator==(const BigNum& other) const { return compare(other) == 0; } // Replaced by default operator==
     bool operator==(const std::string& other) const { return compare(BigNum(other)) == 0; }
     bool operator==(const intmax_t other) const { return compare(BigNum(other)) == 0; }
     bool operator!=(const BigNum& other) const { return compare(other) != 0; }
@@ -519,3 +541,12 @@ inline std::istream& operator>>(std::istream& is, BigNum& bn) {
     bn.parseStr(input);
     return is;
 }
+
+// Asserts
+static_assert(std::equality_comparable<BigNum>);
+static_assert(std::totally_ordered<BigNum>);
+static_assert(std::movable<BigNum>);
+static_assert(std::copyable<BigNum>);
+static_assert(std::default_initializable<BigNum>);
+static_assert(std::semiregular<BigNum>);
+static_assert(std::regular<BigNum>);

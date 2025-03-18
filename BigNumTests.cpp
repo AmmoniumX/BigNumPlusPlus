@@ -99,11 +99,11 @@ void runComparisonTests() {
 }
 
 void runAdvancedMathTests() {
-    cout << "16^2: " << BigNum(16).pow(2) << endl;
+    cout << "16^2: " << BigNum(16).pow(2.0f) << endl;
     cout << "sqrt(64): " << BigNum(64).sqrt() << endl;
-    cout << "10^6: " << BigNum(10).pow(6) << endl;
-    cout << "sqrt(42^2): " << BigNum(42).pow(2).sqrt() << endl;
-    cout << "27.root(3): " << BigNum(27).root(3) << endl;
+    cout << "10^6: " << BigNum(10).pow(6.0f) << endl;
+    cout << "sqrt(42^2): " << BigNum(42).pow(2.0f).sqrt() << endl;
+    cout << "27.root(3): " << BigNum(27).root(3.0f) << endl;
 
     cout << "12345.log10(): ";
     auto v = BigNum(12345).log10();
