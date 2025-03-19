@@ -197,7 +197,7 @@ public:
         if (e < std::numeric_limits<man_t>::max_digits10) {
             double target_precision = Pow10::get(e).value_or(1.0);
             // std::cerr << "target_precision=" << target_precision << std::endl;
-            m = floor(m * target_precision) / target_precision;
+            m = std::round(m * target_precision) / target_precision;
         }
         // std::cerr << "After normalization: m=" << m << ",e=" << e << std::endl;
     }
