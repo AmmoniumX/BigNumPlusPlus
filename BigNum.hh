@@ -175,21 +175,30 @@ public:
         if (*this == max() || *this == min()) { return; }
         if (std::isnan(m)) { e = 0; return; }
         if (std::isinf(m)) { e = 0; return; }
-        if (m == 0) { e = 0; return; }
+        if (m == 0) { e = 0; return; } // For m = 0, set exponent to 0
         if (std::abs(m) < 1 && e == 0) { m = 0; return; } // Any number less than 1 is considered 0
         
         // Start normalization
-        int n_log = static_cast<int>(std::floor(std::log10(std::abs(m))));
+        int n_log = std::max(static_cast<int>(std::floor(std::log10(std::abs(m)))), 0);
+        // if (n_log < 0) { n_log = 0; }
         // std::cerr << "n_log=" << n_log << std::endl;
         m = m / (*Pow10::get(n_log));
         e += n_log;
 
         // Any number less than 1 is considered 0
+        if (e == 0) { m = floor(m); }
         m = (std::abs(m) < 1 && e == 0) ? 0 : m;
 
         // Clamp between max and min
         if (*this > max()) { set(max()); }
         if (*this < min()) { set(min()); }
+
+        // Disregard fractional part if exponent is under mantissa's max decimal precision
+        if (e < std::numeric_limits<man_t>::max_digits10) {
+            double target_precision = Pow10::get(e).value_or(1.0);
+            // std::cerr << "target_precision=" << target_precision << std::endl;
+            m = floor(m * target_precision) / target_precision;
+        }
         // std::cerr << "After normalization: m=" << m << ",e=" << e << std::endl;
     }
 
@@ -256,8 +265,9 @@ public:
             m = m + b.m * (*Pow10::get(delta));
             // e = e;
         }
+        // std::cerr << "Before normalize: m=" << m << ",e=" << e << std::endl;
         normalize();
-        // std::cerr << "Result: " << *this << std::endl;
+        // std::cerr << "Result: m=" << m << ",e=" << e << std::endl;
         return *this;
     }
 
@@ -332,6 +342,7 @@ public:
         // BigNum a = *this; a.normalize();
         // b.normalize();
 
+        // std::cerr << "Comparing m=" << m << ",e=" << e << " and m=" << b.m << ",e=" << b.e << std::endl;
         if (m == b.m && e == b.e) return 0;
         if (is_positive() && b.is_negative()) return 1;
         if (is_negative() && b.is_positive()) return -1;
@@ -442,6 +453,7 @@ public:
 
     // Returns num^power
     BigNum pow(double power) const {
+        // std::cerr << "pow(" << *this << ", " << power << ")" << std::endl;
         // Special cases
         if (power == 0.0) { return BigNum(1); }
         if (m == 0) {
@@ -467,19 +479,25 @@ public:
 
         // Calculate using logarithms
         auto log = log10();
-        if (!log) { return BigNum(0); }
+        if (!log) { 
+            // std::cerr << "Logarithm out of bounds" << std::endl;
+            return BigNum(0); 
+        }
         
         // Calculate new logarithm
         double new_log = static_cast<double>(*log) * power;
         
         // Check if result would be too small
         if (std::abs(new_log) < std::numeric_limits<double>::min_exponent10) {
+            // std::cerr << "Result too small" << std::endl;
             return BigNum(0);
         }
 
         // Split into mantissa and exponent
         man_t m2 = static_cast<man_t>(std::pow(10, std::fmod(new_log, 1.0)));
         exp_t e2 = static_cast<exp_t>(std::floor(new_log));
+        // std::cerr << "Result: m=" << m2 << ",e=" << e2 << std::endl;
+        // std::cerr << "Result: " << BigNum(m2, e2) << std::endl;
 
         return BigNum(m2, e2);
     }
