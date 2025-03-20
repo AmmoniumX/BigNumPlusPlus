@@ -25,6 +25,10 @@ void runInstantiationTests() {
     cout << "BigNum::nan(): " << BigNum::nan() << endl;
     cout << "BigNum::max(): " << BigNum::max() << endl;
     cout << "BigNum::min(): " << BigNum::min() << endl;
+
+    BigNum v6(123456789);
+    cout << "123456789: " << v6 << endl;
+    cout << "123456789 (pretty): " << v6.to_pretty_string() << endl;
 }
 
 void runMathTests() {

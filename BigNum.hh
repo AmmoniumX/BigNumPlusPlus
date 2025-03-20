@@ -21,6 +21,13 @@ Tradeoff: Cannot store numbers between (-1, 0) or (0, 1), but those aren't usual
 #include <concepts>
 #include <type_traits>
 
+using namespace std::string_literals;
+
+// Constant precision for serializing
+static constexpr uint SERIAL_PRECISION = 9;
+static constexpr char DECIMAL_SEPARATOR = '.';
+static constexpr char THOUSANDS_SEPARATOR = ',';
+
 struct BigNumContext {
     uint max_digits = 10; // Up to how many "real" digits to display before using scientific notation
     uint print_precision = 2; // How many fractional digits to display on scientific notation
@@ -95,10 +102,10 @@ private:
         // If necessary, round down to always return 1 digit before the decimal point
         // This is to avoid rounding errors when the number is close to 10
         // Should always be correct given our assumption that |value| < 10
-        if (out_str.substr(0, 3) == "10.") {
-            out_str = "9." + std::string(precision, '9');
-        } else if (out_str.substr(0, 4) == "-10.") {
-            out_str = "-9." + std::string(precision, '9');
+        if (out_str.substr(0, 3) == "10"s+DECIMAL_SEPARATOR) {
+            out_str = "9"s + DECIMAL_SEPARATOR + std::string(precision, '9');
+        } else if (out_str.substr(0, 4) == "-10"s+DECIMAL_SEPARATOR) {
+            out_str = "-9"s + DECIMAL_SEPARATOR + std::string(precision, '9');
         }
         return out_str;
     }
@@ -198,6 +205,7 @@ public:
             double target_precision = Pow10::get(e).value_or(1.0);
             // std::cerr << "target_precision=" << target_precision << std::endl;
             m = std::round(m * target_precision) / target_precision;
+            // m = floor(m * target_precision) / target_precision;
         }
         // std::cerr << "After normalization: m=" << m << ",e=" << e << std::endl;
     }
@@ -378,7 +386,7 @@ public:
     bool operator!=(const intmax_t other) const { return compare(BigNum(other)) != 0; }
 
     // Conversion methods
-    std::string to_string(uint precision=DefaultBigNumContext.print_precision) const {
+    std::string to_string(const uint &precision=DefaultBigNumContext.print_precision) const {
         if (this->is_inf()) { return "inf"; }
         if (this->is_nan()) { return "nan"; }
 
@@ -386,9 +394,12 @@ public:
         // Assumes m and e are already normalized
         uint max_digits = std::max(precision+1, DefaultBigNumContext.max_digits);
         if (this->e < max_digits - 1) {
-            std::string str = std::to_string(m);
+            // std::string str = std::to_string(m);
+            std::string str = to_string_full(m);
+            // std::cerr << "str: " << str << std::endl;
             exp_t newLen = std::min(static_cast<exp_t>(max_digits), e + 1 ) + (str[0] == '-' ? 1 : 0);
-            str.erase(std::remove_if(str.begin(), str.end(), [](char c) { return c == '.'; }), str.end());
+            str.erase(std::remove_if(str.begin(), str.end(), [](char c) { 
+                return c == DECIMAL_SEPARATOR; }), str.end());
             if (str.length() < newLen) {
                 str += std::string(newLen - str.length(), '0');
             } else {
@@ -422,9 +433,29 @@ public:
         return out.str();
     }
 
-    // Serialize with constant precision
+    // Pretty string: 1234567 -> 1,234,567
+    // Scientific notation is not affected
+    std::string to_pretty_string(const uint &precision=DefaultBigNumContext.print_precision) const {
+        std::string str = to_string(precision);
+        
+        // Early exit if in scientific notation or if the number is too small
+        if (str.contains('e') || str.contains(DECIMAL_SEPARATOR)) { return str; }
+        if (str.length() < 4) { return str; }
+
+        // Insert thousands separators
+        for (size_t i = str.length() - 3; i > 0; i -= 3) {
+            str.insert(i, 1, THOUSANDS_SEPARATOR);
+        }
+        return str;
+    }
+
+    // Standard methods for (de)serialization
     std::string serialize() const {
-        return to_string(9);
+        return to_string(SERIAL_PRECISION);
+    }
+
+    static BigNum deserialize(const std::string& str) {
+        return BigNum(str);
     }
 
     // Returns number as intmax_t, or nullopt if the number is too large
