@@ -38,25 +38,25 @@ void runMathTests() {
     BigNum v4("10");
     BigNum v5("0");
 
-    cout << "v1 + v2: " << v1 + v2 << endl;
-    cout << "v2 + v3: " << v2 + v3 << endl;
-    cout << "v3 + v4: " << v3 + v4 << endl;
-    cout << "v4 + v5: " << v4 + v5 << endl;
+    cout << v1 << " + " << v2 << " = " << v1 + v2 << endl;
+    cout << v2 << " + " << v3 << " = " << v2 + v3 << endl;
+    cout << v3 << " + " << v4 << " = " << v3 + v4 << endl;
+    cout << v4 << " + " << v5 << " = " << v4 + v5 << endl;
 
-    cout << "v1 - v2: " << v1 - v2 << endl;
-    cout << "v2 - v3: " << v2 - v3 << endl;
-    cout << "v3 - v4: " << v3 - v4 << endl;
-    cout << "v4 - v5: " << v4 - v5 << endl;
+    cout << v1 << " - " << v2 << " = " << v1 - v2 << endl;
+    cout << v2 << " - " << v3 << " = " << v2 - v3 << endl;
+    cout << v3 << " - " << v4 << " = " << v3 - v4 << endl;
+    cout << v4 << " - " << v5 << " = " << v4 - v5 << endl;
 
-    cout << "v1 * v2: " << v1 * v2 << endl;
-    cout << "v2 * v3: " << v2 * v3 << endl;
-    cout << "v3 * v4: " << v3 * v4 << endl;
-    cout << "v4 * v5: " << v4 * v5 << endl;
+    cout << v1 << " * " << v2 << " = " << v1 * v2 << endl;
+    cout << v2 << " * " << v3 << " = " << v2 * v3 << endl;
+    cout << v3 << " * " << v4 << " = " << v3 * v4 << endl;
+    cout << v4 << " * " << v5 << " = " << v4 * v5 << endl;
 
-    cout << "v1 / v2: " << v1 / v2 << endl;
-    cout << "v2 / v3: " << v2 / v3 << endl;
-    cout << "v3 / v4: " << v3 / v4 << endl;
-    cout << "v4 / v5: " << v4 / v5 << endl;
+    cout << v1 << " / " << v2 << " = " << v1 / v2 << endl;
+    cout << v2 << " / " << v3 << " = " << v2 / v3 << endl;
+    cout << v3 << " / " << v4 << " = " << v3 / v4 << endl;
+    cout << v4 << " / " << v5 << " = " << v4 / v5 << endl;
 }
 
 void runComparisonTests() {
@@ -66,40 +66,40 @@ void runComparisonTests() {
     BigNum v4("10");
     BigNum v5("0");
 
-    cout << "v1 < v1: " << (v1 < v1) << endl;
-    cout << "v1 <= v1: " << (v1 <= v1) << endl;
-    cout << "v1 > v1: " << (v1 > v1) << endl;
-    cout << "v1 >= v1: " << (v1 >= v1) << endl;
-    cout << "v1 == v1: " << (v1 == v1) << endl;
-    cout << "v1 != v1: " << (v1 != v1) << endl;
+    cout << v1 << " < " << v2 << ": " << (v1 < v2) << endl;
+    cout << v1 << " <= " << v2 << ": " << (v1 <= v2) << endl;
+    cout << v1 << " > " << v2 << ": " << (v1 > v2) << endl;
+    cout << v1 << " >= " << v2 << ": " << (v1 >= v2) << endl;
+    cout << v1 << " == " << v2 << ": " << (v1 == v2) << endl;
+    cout << v1 << " != " << v2 << ": " << (v1 != v2) << endl;
 
-    cout << "v1 < v2: " << (v1 < v2) << endl;
-    cout << "v1 <= v2: " << (v1 <= v2) << endl;
-    cout << "v1 > v2: " << (v1 > v2) << endl;
-    cout << "v1 >= v2: " << (v1 >= v2) << endl;
-    cout << "v1 == v2: " << (v1 == v2) << endl;
-    cout << "v1 != v2: " << (v1 != v2) << endl;
+    cout << v1 << " < " << v2 << ": " << (v1 < v2) << endl;
+    cout << v1 << " <= " << v2 << ": " << (v1 <= v2) << endl;
+    cout << v1 << " > " << v2 << ": " << (v1 > v2) << endl;
+    cout << v1 << " >= " << v2 << ": " << (v1 >= v2) << endl;
+    cout << v1 << " == " << v2 << ": " << (v1 == v2) << endl;
+    cout << v1 << " != " << v2 << ": " << (v1 != v2) << endl;
 
-    cout << "v1 < v3: " << (v1 < v3) << endl;
-    cout << "v1 <= v3: " << (v1 <= v3) << endl;
-    cout << "v1 > v3: " << (v1 > v3) << endl;
-    cout << "v1 >= v3: " << (v1 >= v3) << endl;
-    cout << "v1 == v3: " << (v1 == v3) << endl;
-    cout << "v1 != v3: " << (v1 != v3) << endl;
+    cout << v1 << " < " << v3 << ": " << (v1 < v3) << endl;
+    cout << v1 << " <= " << v3 << ": " << (v1 <= v3) << endl;
+    cout << v1 << " > " << v3 << ": " << (v1 > v3) << endl;
+    cout << v1 << " >= " << v3 << ": " << (v1 >= v3) << endl;
+    cout << v1 << " == " << v3 << ": " << (v1 == v3) << endl;
+    cout << v1 << " != " << v3 << ": " << (v1 != v3) << endl;
 
-    cout << "v1 < v4: " << (v1 < v4) << endl;
-    cout << "v1 <= v4: " << (v1 <= v4) << endl;
-    cout << "v1 > v4: " << (v1 > v4) << endl;
-    cout << "v1 >= v4: " << (v1 >= v4) << endl;
-    cout << "v1 == v4: " << (v1 == v4) << endl;
-    cout << "v1 != v4: " << (v1 != v4) << endl;
+    cout << v1 << " < " << v4 << ": " << (v1 < v4) << endl;
+    cout << v1 << " <= " << v4 << ": " << (v1 <= v4) << endl;
+    cout << v1 << " > " << v4 << ": " << (v1 > v4) << endl;
+    cout << v1 << " >= " << v4 << ": " << (v1 >= v4) << endl;
+    cout << v1 << " == " << v4 << ": " << (v1 == v4) << endl;
+    cout << v1 << " != " << v4 << ": " << (v1 != v4) << endl;
 
-    cout << "v1 < v5: " << (v1 < v5) << endl;
-    cout << "v1 <= v5: " << (v1 <= v5) << endl;
-    cout << "v1 > v5: " << (v1 > v5) << endl;
-    cout << "v1 >= v5: " << (v1 >= v5) << endl;
-    cout << "v1 == v5: " << (v1 == v5) << endl;
-    cout << "v1 != v5: " << (v1 != v5) << endl;
+    cout << v1 << " < " << v5 << ": " << (v1 < v5) << endl;
+    cout << v1 << " <= " << v5 << ": " << (v1 <= v5) << endl;
+    cout << v1 << " > " << v5 << ": " << (v1 > v5) << endl;
+    cout << v1 << " >= " << v5 << ": " << (v1 >= v5) << endl;
+    cout << v1 << " == " << v5 << ": " << (v1 == v5) << endl;
+    cout << v1 << " != " << v5 << ": " << (v1 != v5) << endl;
 }
 
 void runAdvancedMathTests() {
