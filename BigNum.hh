@@ -178,7 +178,6 @@ public:
 
     // Normalization: mantissa set in range (-10, 1] and [1, 10)
     void normalize() {
-        // std::cerr << "Normalizing m=" << m << ",e=" << e << std::endl;
         if (*this == max() || *this == min()) { return; }
         if (std::isnan(m)) { e = 0; return; }
         if (std::isinf(m)) { e = 0; return; }
@@ -188,7 +187,6 @@ public:
         // Start normalization
         int n_log = std::max(static_cast<int>(std::floor(std::log10(std::abs(m)))), 0);
         // if (n_log < 0) { n_log = 0; }
-        // std::cerr << "n_log=" << n_log << std::endl;
         m = m / (*Pow10::get(n_log));
         e += n_log;
 
@@ -203,16 +201,13 @@ public:
         // Disregard fractional part if exponent is under mantissa's max decimal precision
         if (e < std::numeric_limits<man_t>::max_digits10) {
             double target_precision = Pow10::get(e).value_or(1.0);
-            // std::cerr << "target_precision=" << target_precision << std::endl;
             m = std::round(m * target_precision) / target_precision;
             // m = floor(m * target_precision) / target_precision;
         }
-        // std::cerr << "After normalization: m=" << m << ",e=" << e << std::endl;
     }
 
     // Arithmetic operations
     BigNum add(const BigNum& b) const {
-        // std::cerr << "Adding m=" << m << ",e=" << e << " and m=" << b.m << ",e=" << b.e << std::endl;
         bool this_is_bigger = e > b.e;
         exp_t delta = this_is_bigger ? e - b.e : b.e - e;
         man_t m2;
@@ -228,7 +223,6 @@ public:
             e2 = e;
         }
 
-        // std::cerr << "Result: " << *this << std::endl;
         return BigNum(m2, e2);
     }
 
@@ -260,7 +254,6 @@ public:
     }
 
     BigNum& operator+=(const BigNum& b) {
-        // std::cerr << "Adding m=" << m << ",e=" << e << " and m=" << b.m << ",e=" << b.e << std::endl;
         bool this_is_bigger = e > b.e;
         exp_t delta = this_is_bigger ? e - b.e : b.e - e;
         if (delta > 14) {
@@ -273,9 +266,7 @@ public:
             m = m + b.m * (*Pow10::get(delta));
             // e = e;
         }
-        // std::cerr << "Before normalize: m=" << m << ",e=" << e << std::endl;
         normalize();
-        // std::cerr << "Result: m=" << m << ",e=" << e << std::endl;
         return *this;
     }
 
@@ -350,7 +341,6 @@ public:
         // BigNum a = *this; a.normalize();
         // b.normalize();
 
-        // std::cerr << "Comparing m=" << m << ",e=" << e << " and m=" << b.m << ",e=" << b.e << std::endl;
         if (m == b.m && e == b.e) return 0;
         if (is_positive() && b.is_negative()) return 1;
         if (is_negative() && b.is_positive()) return -1;
@@ -396,7 +386,6 @@ public:
         if (this->e < max_digits - 1) {
             // std::string str = std::to_string(m);
             std::string str = to_string_full(m);
-            // std::cerr << "str: " << str << std::endl;
             exp_t newLen = std::min(static_cast<exp_t>(max_digits), e + 1 ) + (str[0] == '-' ? 1 : 0);
             str.erase(std::remove_if(str.begin(), str.end(), [](char c) { 
                 return c == DECIMAL_SEPARATOR; }), str.end());
@@ -417,7 +406,6 @@ public:
         // if (*this == max()) { m_str = std::string("9.") + std::string(precision, '9'); }
         // else if (*this == min()) { m_str = std::string("-9.") + std::string(precision, '9'); }
         // else { m_str = to_string_floor(m, precision); }
-        // std::cerr << "m_str: " << m_str << std::endl;
         
         // Trim the result to the desired precision
         // std::string m_str = to_string_floor(m, 2);
@@ -484,7 +472,6 @@ public:
 
     // Returns num^power
     BigNum pow(double power) const {
-        // std::cerr << "pow(" << *this << ", " << power << ")" << std::endl;
         // Special cases
         if (power == 0.0) { return BigNum(1); }
         if (m == 0) {
@@ -527,8 +514,6 @@ public:
         // Split into mantissa and exponent
         man_t m2 = static_cast<man_t>(std::pow(10, std::fmod(new_log, 1.0)));
         exp_t e2 = static_cast<exp_t>(std::floor(new_log));
-        // std::cerr << "Result: m=" << m2 << ",e=" << e2 << std::endl;
-        // std::cerr << "Result: " << BigNum(m2, e2) << std::endl;
 
         return BigNum(m2, e2);
     }
