@@ -190,9 +190,10 @@ public:
         m = m / (*Pow10::get(n_log));
         e += n_log;
 
-        // Any number less than 1 is considered 0
-        if (e == 0) { m = floor(m); }
-        m = (std::abs(m) < 1 && e == 0) ? 0 : m;
+        // TODO check if this is really needed or not
+        // // Any number less than 1 is considered 0
+        // if (e == 0) { m = floor(m); }
+        // m = (std::abs(m) < 1 && e == 0) ? 0 : m;
 
         // Clamp between max and min
         if (*this > max()) { set(max()); }
