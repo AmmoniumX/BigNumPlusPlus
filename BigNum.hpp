@@ -18,10 +18,7 @@ Tradeoff: Cannot store numbers between (-1, 0) or (0, 1), but those aren't usual
 #include <cassert>
 #include <iostream>
 #include <iomanip>
-#include <concepts>
 #include <type_traits>
-#include <print>
-#include <variant>
 
 using namespace std::string_literals;
 
