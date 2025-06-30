@@ -20,6 +20,7 @@ Tradeoff: Cannot store numbers between (-1, 0) or (0, 1), but those aren't usual
 #include <iomanip>
 #include <concepts>
 #include <type_traits>
+#include <print>
 
 using namespace std::string_literals;
 
@@ -86,7 +87,7 @@ private:
     }
     static std::string to_string_full(const double &value) {
         std::ostringstream out;
-        out << std::setprecision(std::numeric_limits<double>::max_digits10) << value;
+        out << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << value;
         return out.str();
     }
     static std::string to_string_floor(const double &value, const int &precision) {
@@ -160,6 +161,11 @@ public:
         normalize();
     }
 
+    BigNum(const intmax_t val) : m(static_cast<man_t>(val)), e(0) {
+        if (val == 0) { e = 0; } // For 0, set exponent to 0
+        normalize();
+    }
+
     BigNum(const std::string& str) {
         parseStr(str);
     }
@@ -178,6 +184,7 @@ public:
 
     // Normalization: mantissa set in range (-10, 1] and [1, 10)
     void normalize() {
+        // std::print("Normalizing BigNum: m = {}, e = {}\n", m, e);
         if (*this == max() || *this == min()) { return; }
         if (std::isnan(m)) { e = 0; return; }
         if (std::isinf(m)) { e = 0; return; }
@@ -205,6 +212,7 @@ public:
             m = std::round(m * target_precision) / target_precision;
             // m = floor(m * target_precision) / target_precision;
         }
+        // std::print("Normalized BigNum: m = {}, e = {}\n", m, e);
     }
 
     // Arithmetic operations
@@ -239,9 +247,9 @@ public:
         // division by zero, return NaN
         if (b.m == 0) { return nan(); }
         // Divisor is larger than dividend, result is 0
-        if (b.e > e) { return BigNum(0); }
+        if (b.e > e) { return BigNum(static_cast<intmax_t>(0)); }
         // Any number less than 1 is considered 0
-        if (b.e == e && std::abs(m / b.m) < 1) { return BigNum(0); }
+        if (b.e == e && std::abs(m / b.m) < 1) { return BigNum(static_cast<intmax_t>(0)); }
         // Perform division
         return BigNum(m / b.m, e - b.e);
     }
@@ -251,7 +259,7 @@ public:
     }
 
     BigNum negate() const {
-        return mul(BigNum(-1));
+        return mul(BigNum(static_cast<intmax_t>(-1)));
     }
 
     BigNum& operator+=(const BigNum& b) {
@@ -322,10 +330,10 @@ public:
     BigNum& operator*=(const intmax_t b) { return *this *= BigNum(b); }
     BigNum& operator/=(const std::string& b) { return *this /= BigNum(b); }
     BigNum& operator/=(const intmax_t b) { return *this /= BigNum(b); }
-    BigNum& operator++() { return *this += BigNum(1); }
-    BigNum operator++(int) { BigNum temp(*this); *this += BigNum(1); return temp; }
-    BigNum& operator--() { return *this -= BigNum(1); }
-    BigNum operator--(int) { BigNum temp(*this); *this -= BigNum(1); return temp; }
+    BigNum& operator++() { return *this += BigNum(static_cast<intmax_t>(1)); }
+    BigNum operator++(int) { BigNum temp(*this); *this += BigNum(static_cast<intmax_t>(1)); return temp; }
+    BigNum& operator--() { return *this -= BigNum(static_cast<intmax_t>(1)); }
+    BigNum operator--(int) { BigNum temp(*this); *this -= BigNum(static_cast<intmax_t>(1)); return temp; }
 
 
     // Comparison operations
@@ -385,19 +393,34 @@ public:
         // Assumes m and e are already normalized
         uint max_digits = std::max(precision+1, DefaultBigNumContext.max_digits);
         if (this->e < max_digits - 1) {
-            // std::string str = std::to_string(m);
             std::string str = to_string_full(m);
             exp_t newLen = std::min(static_cast<exp_t>(max_digits), e + 1 ) + (str[0] == '-' ? 1 : 0);
+
+            // Remove the decimal separator if it exists
             str.erase(std::remove_if(str.begin(), str.end(), [](char c) { 
                 return c == DECIMAL_SEPARATOR; }), str.end());
+
+            // If the string is shorter than the desired length, pad with zeros
             if (str.length() < newLen) {
                 str += std::string(newLen - str.length(), '0');
             } else {
+                // If the string is longer than the desired length, truncate it,
+                // and round the last digit if necessary
+                bool round_up = false;
+                
+                if (str.length() > newLen && int(str[newLen]) >= 5) {
+                    // Round up the last digit
+                    round_up = true;
+                }
                 str = str.substr(0, newLen);
+                if (round_up) {
+                    assert(!str.empty() && "String should not be empty after truncation");
+                    str[str.length() - 1] += 1;
+                }
             }
             return str;
         }
-
+        
         // Otherwise, use scientific notation
         std::ostringstream out;
         // out << std::fixed << std::setprecision(precision) << m;
@@ -474,10 +497,10 @@ public:
     // Returns num^power
     BigNum pow(double power) const {
         // Special cases
-        if (power == 0.0) { return BigNum(1); }
+        if (power == 0.0) { return BigNum(static_cast<intmax_t>(1)); }
         if (m == 0) {
             if (power < 0) { throw std::domain_error("Cannot raise 0 to a negative power"); }
-            return BigNum(0);
+            return BigNum(static_cast<intmax_t>(0));
         }
 
         // When the mantissa is negative
@@ -500,7 +523,7 @@ public:
         auto log = log10();
         if (!log) { 
             // std::cerr << "Logarithm out of bounds" << std::endl;
-            return BigNum(0); 
+            return BigNum(static_cast<intmax_t>(0)); 
         }
         
         // Calculate new logarithm
@@ -509,7 +532,7 @@ public:
         // Check if result would be too small
         if (std::abs(new_log) < std::numeric_limits<double>::min_exponent10) {
             // std::cerr << "Result too small" << std::endl;
-            return BigNum(0);
+            return BigNum(static_cast<intmax_t>(0));
         }
 
         // Split into mantissa and exponent
@@ -527,7 +550,7 @@ public:
     // Returns num^(1/n), aka the nth root
     BigNum root(intmax_t n) const { 
         if (n == 0) { throw std::domain_error("Cannot take the zeroth root"); } // Handle zero early 
-        if (m == 0) { return BigNum(0); }
+        if (m == 0) { return BigNum(static_cast<intmax_t>(0)); }
         // Handle negative numbers: Only allow odd roots for negative bases
         bool is_negative = (m < 0);
         if (is_negative) {

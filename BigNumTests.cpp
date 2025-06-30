@@ -1,129 +1,159 @@
 #include <iostream>
 #include <cstdlib>
+#include <cassert>
+#include <cmath>
+#include <string>
+#include <sstream>
+#include <optional>
 
-#include "BigNum.hh"
+#include "BigNum.hpp"
 
 using namespace std;
 
+// Helper to convert anything to a string for printing
+template <typename T>
+std::string to_string_test(const T& value) {
+    std::stringstream ss;
+    ss << value;
+    return ss.str();
+}
+
+// Overload for BigNum to use its own to_string
+std::string to_string_test(const BigNum& value) {
+    return value.to_string(9); // Use high precision for tests
+}
+
+// Overload for booleans
+std::string to_string_test(const bool value) {
+    return value ? "true" : "false";
+}
+
+template <typename T>
+constexpr void assertEquals(const T& expected, const T& actual, const std::string& testName) {
+    if (expected != actual) {
+        std::cerr << "Test failed: " << testName << std::endl;
+        std::cerr << "  Expected: " << expected << std::endl;
+        std::cerr << "  Got:      " << actual << std::endl;
+        exit(1);
+    }
+}
+
+constexpr void assertTrue(bool condition, const std::string& testName) {
+    if (!condition) {
+        std::cerr << "Test failed: " << testName << std::endl;
+        std::cerr << "  Expected: true" << std::endl;
+        std::cerr << "  Got:      false" << std::endl;
+        exit(1);
+    }
+}
+
+void assertIsClose(double expected, double actual, const std::string& testName, double tolerance = 1e-5) {
+    if (std::abs(expected - actual) > tolerance) {
+        std::cerr << "Test failed: " << testName << std::endl;
+        std::cerr << "  Expected: " << expected << std::endl;
+        std::cerr << "  Got:      " << actual << std::endl;
+        exit(1);
+    }
+}
+
+
 void runInstantiationTests() {
-    BigNum v1("123456789e123456789");
-    cout << "123456789e123456789: " << v1 << endl;
+    BigNum v1("1.23456789e123456789");
+    assertEquals("1.23e123456789"s, v1.to_string(2), "Instantiation from string (positive)");
     
-    BigNum v2("-123456789e123456789");
-    cout << "-123456789e123456789: " << v2 << endl;
+    BigNum v2("-1.23456789e123456789");
+    assertEquals("-1.24e123456789"s, v2.to_string(2), "Instantiation from string (negative)");
 
     BigNum v3("100");
-    cout << "100: " << v3 << endl;
+    assertEquals("100"s, v3.to_string(), "Instantiation from string (small positive)");
 
     BigNum v4("10");
-    cout << "10: " << v4 << endl;
+    assertEquals("10"s, v4.to_string(), "Instantiation from string (small positive 2)");
 
     BigNum v5("0");
-    cout << "0: " << v5 << endl;
+    assertEquals("0"s, v5.to_string(), "Instantiation from string (zero)");
 
-    cout << "BigNum::inf(): " << BigNum::inf() << endl;
-    cout << "BigNum::nan(): " << BigNum::nan() << endl;
-    cout << "BigNum::max(): " << BigNum::max() << endl;
-    cout << "BigNum::min(): " << BigNum::min() << endl;
+    assertTrue(BigNum::inf().is_inf(), "BigNum::inf()");
+    assertTrue(BigNum::nan().is_nan(), "BigNum::nan()");
 
-    BigNum v6(123456789);
-    cout << "123456789: " << v6 << endl;
-    cout << "123456789 (pretty): " << v6.to_pretty_string() << endl;
+    BigNum v6(123456789L);
+    assertEquals("123456789"s, v6.to_string(), "Instantiation from integer");
+    assertEquals("123,456,789"s, v6.to_pretty_string(), "Pretty string formatting");
 }
 
 void runMathTests() {
-    BigNum v1("123456789e123456789");
-    BigNum v2("-123456789e123456789");
+    BigNum v1("1.23e100");
+    BigNum v2("-1.23e100");
     BigNum v3("100");
     BigNum v4("10");
     BigNum v5("0");
 
-    cout << v1 << " + " << v2 << " = " << v1 + v2 << endl;
-    cout << v2 << " + " << v3 << " = " << v2 + v3 << endl;
-    cout << v3 << " + " << v4 << " = " << v3 + v4 << endl;
-    cout << v4 << " + " << v5 << " = " << v4 + v5 << endl;
+    assertEquals(v5, v1 + v2, "Addition (positive + negative)");
+    assertEquals("-1.23e100"s, (v2 + v3).to_string(2), "Addition (negative + small positive)");
+    assertEquals(BigNum("110"), v3 + v4, "Addition (small positive + small positive)");
+    assertEquals(v4, v4 + v5, "Addition (small positive + zero)");
 
-    cout << v1 << " - " << v2 << " = " << v1 - v2 << endl;
-    cout << v2 << " - " << v3 << " = " << v2 - v3 << endl;
-    cout << v3 << " - " << v4 << " = " << v3 - v4 << endl;
-    cout << v4 << " - " << v5 << " = " << v4 - v5 << endl;
+    assertEquals("2.46e100"s, (v1 - v2).to_string(2), "Subtraction (positive - negative)");
+    assertEquals("-1.23e100"s, (v2 - v3).to_string(2), "Subtraction (negative - small positive)");
+    assertEquals(BigNum("90"), v3 - v4, "Subtraction (small positive - small positive)");
+    assertEquals(v4, v4 - v5, "Subtraction (small positive - zero)");
 
-    cout << v1 << " * " << v2 << " = " << v1 * v2 << endl;
-    cout << v2 << " * " << v3 << " = " << v2 * v3 << endl;
-    cout << v3 << " * " << v4 << " = " << v3 * v4 << endl;
-    cout << v4 << " * " << v5 << " = " << v4 * v5 << endl;
+    assertEquals(BigNum("1000"), v3 * v4, "Multiplication (small positive * small positive)");
+    assertEquals(v5, v4 * v5, "Multiplication (small positive * zero)");
 
-    cout << v1 << " / " << v2 << " = " << v1 / v2 << endl;
-    cout << v2 << " / " << v3 << " = " << v2 / v3 << endl;
-    cout << v3 << " / " << v4 << " = " << v3 / v4 << endl;
-    cout << v4 << " / " << v5 << " = " << v4 / v5 << endl;
+    assertEquals(v4, v3 / v4, "Division (small positive / small positive)");
+    assertTrue((v4 / v5).is_nan(), "Division (small positive / zero)");
 }
 
 void runComparisonTests() {
-    BigNum v1("123456789e123456789");
-    BigNum v2("-123456789e123456789");
+    BigNum v1("1.23e100");
+    BigNum v2("-1.23e100");
     BigNum v3("100");
     BigNum v4("10");
     BigNum v5("0");
 
-    cout << v1 << " < " << v2 << ": " << (v1 < v2) << endl;
-    cout << v1 << " <= " << v2 << ": " << (v1 <= v2) << endl;
-    cout << v1 << " > " << v2 << ": " << (v1 > v2) << endl;
-    cout << v1 << " >= " << v2 << ": " << (v1 >= v2) << endl;
-    cout << v1 << " == " << v2 << ": " << (v1 == v2) << endl;
-    cout << v1 << " != " << v2 << ": " << (v1 != v2) << endl;
+    assertTrue(!(v1 < v2), "Comparison (v1 < v2)");
+    assertTrue(v1 > v2, "Comparison (v1 > v2)");
+    assertTrue(v1 != v2, "Comparison (v1 != v2)");
+    assertTrue(v1 > v3, "Comparison (v1 > v3)");
+    assertTrue(v1 > v4, "Comparison (v1 > v4)");
+    assertTrue(v1 > v5, "Comparison (v1 > v5)");
 
-    cout << v1 << " < " << v2 << ": " << (v1 < v2) << endl;
-    cout << v1 << " <= " << v2 << ": " << (v1 <= v2) << endl;
-    cout << v1 << " > " << v2 << ": " << (v1 > v2) << endl;
-    cout << v1 << " >= " << v2 << ": " << (v1 >= v2) << endl;
-    cout << v1 << " == " << v2 << ": " << (v1 == v2) << endl;
-    cout << v1 << " != " << v2 << ": " << (v1 != v2) << endl;
+    assertTrue(v2 < v3, "Comparison (v2 < v3)");
+    assertTrue(v2 < v4, "Comparison (v2 < v4)");
+    assertTrue(v2 < v5, "Comparison (v2 < v5)");
 
-    cout << v1 << " < " << v3 << ": " << (v1 < v3) << endl;
-    cout << v1 << " <= " << v3 << ": " << (v1 <= v3) << endl;
-    cout << v1 << " > " << v3 << ": " << (v1 > v3) << endl;
-    cout << v1 << " >= " << v3 << ": " << (v1 >= v3) << endl;
-    cout << v1 << " == " << v3 << ": " << (v1 == v3) << endl;
-    cout << v1 << " != " << v3 << ": " << (v1 != v3) << endl;
-
-    cout << v1 << " < " << v4 << ": " << (v1 < v4) << endl;
-    cout << v1 << " <= " << v4 << ": " << (v1 <= v4) << endl;
-    cout << v1 << " > " << v4 << ": " << (v1 > v4) << endl;
-    cout << v1 << " >= " << v4 << ": " << (v1 >= v4) << endl;
-    cout << v1 << " == " << v4 << ": " << (v1 == v4) << endl;
-    cout << v1 << " != " << v4 << ": " << (v1 != v4) << endl;
-
-    cout << v1 << " < " << v5 << ": " << (v1 < v5) << endl;
-    cout << v1 << " <= " << v5 << ": " << (v1 <= v5) << endl;
-    cout << v1 << " > " << v5 << ": " << (v1 > v5) << endl;
-    cout << v1 << " >= " << v5 << ": " << (v1 >= v5) << endl;
-    cout << v1 << " == " << v5 << ": " << (v1 == v5) << endl;
-    cout << v1 << " != " << v5 << ": " << (v1 != v5) << endl;
+    assertTrue(v3 > v4, "Comparison (v3 > v4)");
+    assertTrue(v3 > v5, "Comparison (v3 > v5)");
+    
+    assertTrue(v4 > v5, "Comparison (v4 > v5)");
 }
 
 void runAdvancedMathTests() {
-    cout << "16^2: " << BigNum(16).pow(2.0f) << endl;
-    cout << "sqrt(64): " << BigNum(64).sqrt() << endl;
-    cout << "10^6: " << BigNum(10).pow(6.0f) << endl;
-    cout << "sqrt(42^2): " << BigNum(42).pow(2.0f).sqrt() << endl;
-    cout << "27.root(3): " << BigNum(27).root(3.0f) << endl;
+    assertEquals(BigNum(static_cast<intmax_t>(256)), BigNum(static_cast<intmax_t>(16)).pow(2.0), "pow(2.0)");
+    assertEquals(BigNum(static_cast<intmax_t>(8)), BigNum(static_cast<intmax_t>(64)).sqrt(), "sqrt()");
+    assertEquals(BigNum("1e6"), BigNum(static_cast<intmax_t>(10)).pow(6.0), "pow(6.0)");
+    assertEquals(BigNum(static_cast<intmax_t>(42)), BigNum(static_cast<intmax_t>(42)).pow(2.0).sqrt(), "sqrt(pow(2.0))");
+    assertEquals(BigNum(static_cast<intmax_t>(3)), BigNum(static_cast<intmax_t>(27)).root(3), "root(3)");
 
-    cout << "12345.log10(): ";
-    auto v = BigNum(12345).log10();
-    if (v) { cout << std::to_string(*v); } else { cout << "nullopt"; } 
-    cout << endl;
+    auto log1 = BigNum(static_cast<intmax_t>(12345)).log10();
+    assertTrue(log1.has_value(), "log10(12345) exists");
+    assertIsClose(4.09149, *log1, "log10(12345) value");
 
-    cout << "1.234e1000.log10(): ";
-    auto v2 = BigNum("1.234e1000").log10();
-    if (v2) { cout << std::to_string(*v2); } else { cout << "nullopt"; }
-    cout << endl;
+    auto log2 = BigNum("1.234e1000").log10();
+    assertTrue(log2.has_value(), "log10(1.234e1000) exists");
+    assertIsClose(1000.0913, *log2, "log10(1.234e1000) value", 1e-4);
 }
 
 int main() {
+    cout << "Running tests..." << endl;
+    
     runInstantiationTests();
     runMathTests();
     runComparisonTests();
     runAdvancedMathTests();
+
+    cout << "All tests passed!" << endl;
+
     return 0;
 }

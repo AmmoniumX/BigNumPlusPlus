@@ -1,4 +1,4 @@
-CXXFLAGS = -std=c++23 -Wall -Wextra -O3
+CXXFLAGS = -std=c++23 -Wall -Wextra -O3 -march=native -I.
 
 ALL = BigNum.out
 all: $(ALL)
@@ -6,7 +6,7 @@ all: $(ALL)
 BigNum.out: BigNum.o
 	$(CXX) $(CXXFLAGS) -o $@ $<
 
-BigNum.o: BigNumTests.cpp BigNum.hh
+BigNum.o: BigNumTests.cpp BigNum.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 clean:
