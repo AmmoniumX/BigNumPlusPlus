@@ -145,6 +145,18 @@ void runAdvancedMathTests() {
     assertIsClose(1000.0913, *log2, "log10(1.234e1000) value", 1e-4);
 }
 
+void runSpecialCaseTests() {
+    assertTrue(BigNum::inf().is_inf(), "BigNum::inf() is infinity");
+    assertTrue(BigNum::nan().is_nan(), "BigNum::nan() is NaN");
+
+    assertTrue((BigNum::inf() + BigNum::inf()) == BigNum::inf(), "BigNum::inf() + BigNum::inf() is still infinity");
+    assertTrue((BigNum::nan() + BigNum::nan()).is_nan(), "BigNum::nan() + BigNum::nan() is NaN");
+    assertTrue(!(BigNum::nan() == BigNum::nan()), "BigNum::nan() is not equal to itself");
+
+    assertTrue((BigNum::max() + 1) == BigNum::max(), "BigNum::max() + 1 is still max");
+    assertTrue((BigNum::min() - 1) == BigNum::min(), "BigNum::min() - 1 is still min");
+}
+
 int main() {
     cout << "Running tests..." << endl;
     
@@ -152,6 +164,7 @@ int main() {
     runMathTests();
     runComparisonTests();
     runAdvancedMathTests();
+    runSpecialCaseTests();
 
     cout << "All tests passed!" << endl;
 

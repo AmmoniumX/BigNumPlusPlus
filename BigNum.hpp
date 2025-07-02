@@ -31,44 +31,47 @@ using namespace std::string_literals;
 #endif
 
 // Constant precision for serializing
-static constexpr uint SERIAL_PRECISION = 9;
-static constexpr char DECIMAL_SEPARATOR = '.';
-static constexpr char THOUSANDS_SEPARATOR = ',';
+namespace BigNumber {
+    static constexpr uint SERIAL_PRECISION = 9;
+    static constexpr char DECIMAL_SEPARATOR = '.';
+    static constexpr char THOUSANDS_SEPARATOR = ',';
 
-struct BigNumContext {
-    uint max_digits = 10; // Up to how many "real" digits to display before using scientific notation
-    uint print_precision = 2; // How many fractional digits to display on scientific notation
-};
-inline BigNumContext DefaultBigNumContext;
+    struct BigNumContext {
+        uint max_digits = 10; // Up to how many "real" digits to display before using scientific notation
+        uint print_precision = 2; // How many fractional digits to display on scientific notation
+    };
+    inline BigNumContext DefaultBigNumContext;
 
-static constexpr int Pow10TableOffset = std::numeric_limits<double>::max_exponent10;
-static constexpr int Pow10TableSize = 2 * Pow10TableOffset + 1;
-static constexpr std::array<double, Pow10TableSize> Pow10_generate_table() {
-    std::array<double, Pow10TableSize> table{};
-    table[Pow10TableOffset] = 1.0;
-    double pos = 1.0;
-    for (int i = 1; i <= Pow10TableOffset; ++i) {
-        pos *= 10.0;
-        table[Pow10TableOffset + i] = pos;      // positive exponents: 10^i
-        table[Pow10TableOffset - i] = 1.0 / pos;  // negative exponents: 10^(-i)
-    }
-    return table;
-};
-
-class Pow10 {
-private:
-    Pow10() = delete;
-public:
-    static constexpr std::array<double, Pow10TableSize> Pow10Table = Pow10_generate_table();
-
-    // e must be in the range [-offset, offset]
-    static constexpr std::optional<double> get(int e) {
-        if (e < -Pow10TableOffset || e > Pow10TableOffset) {
-            return std::nullopt;
+    static constexpr int Pow10TableOffset = std::numeric_limits<double>::max_exponent10;
+    static constexpr int Pow10TableSize = 2 * Pow10TableOffset + 1;
+    static constexpr std::array<double, Pow10TableSize> Pow10_generate_table() {
+        std::array<double, Pow10TableSize> table{};
+        table[Pow10TableOffset] = 1.0;
+        double pos = 1.0;
+        for (int i = 1; i <= Pow10TableOffset; ++i) {
+            pos *= 10.0;
+            table[Pow10TableOffset + i] = pos;      // positive exponents: 10^i
+            table[Pow10TableOffset - i] = 1.0 / pos;  // negative exponents: 10^(-i)
         }
-        return Pow10Table[e + Pow10TableOffset];
-    }
-};
+        return table;
+    };
+
+    class Pow10 {
+    private:
+        Pow10() = delete;
+    public:
+        static constexpr std::array<double, Pow10TableSize> Pow10Table = Pow10_generate_table();
+
+        // e must be in the range [-offset, offset]
+        static constexpr std::optional<double> get(int e) {
+            if (e < -Pow10TableOffset || e > Pow10TableOffset) {
+                return std::nullopt;
+            }
+            return Pow10Table[e + Pow10TableOffset];
+        }
+    };
+}
+using namespace BigNumber;
 
 class BigNum {
     using man_t = double;
@@ -116,6 +119,34 @@ private:
         }
         return out_str;
     }
+
+    // Helper functions since std::nextafter is not constexpr in gcc yet
+
+    static constexpr float prev_float(float x) {
+        using uint = std::uint32_t;
+        static_assert(sizeof(float) == sizeof(uint), "Size of float and uint must be the same");
+
+        if (x <= -std::numeric_limits<float>::infinity()) return -std::numeric_limits<float>::infinity();
+        if (x != x) return x; // NaN
+        if (x == 0.0f) return -std::numeric_limits<float>::denorm_min();
+
+        uint bits = std::bit_cast<uint>(x);
+        bits = (x > 0.0f) ? (bits - 1) : (bits + 1);
+        return std::bit_cast<float>(bits);
+    }
+
+    static constexpr float next_float(float x) {
+        using uint = std::uint32_t;
+        static_assert(sizeof(float) == sizeof(uint), "Size of float and uint must be the same");
+
+        if (x >= std::numeric_limits<float>::infinity()) return std::numeric_limits<float>::infinity();
+        if (x != x) return x; // NaN
+        if (x == 0.0f) return std::numeric_limits<float>::denorm_min();
+
+        uint bits = std::bit_cast<uint>(x);
+        bits = (x > 0.0f) ? (bits + 1) : (bits - 1);
+        return std::bit_cast<float>(bits);
+    }
     
     // Before C++26, in order to qualify our constructor as constexpr,
     // we need a tag to indicate that normalization is not needed
@@ -155,36 +186,38 @@ private:
 public:
     static constexpr const BigNum& inf() { 
         #if __cplusplus < 202600L
-        static constexpr BigNum inf_val(std::numeric_limits<double>::infinity(), 0, NoNormalizeTag{}); 
+        static constexpr BigNum inf_val(std::numeric_limits<man_t>::infinity(), 0, NoNormalizeTag{}); 
         #else
-        static constexpr BigNum inf_val(std::numeric_limits<double>::infinity(), 0, false);
+        static constexpr BigNum inf_val(std::numeric_limits<man_t>::infinity(), 0, false);
         #endif
 
         return inf_val;
     }
     static constexpr const BigNum& nan() { 
         #if __cplusplus < 202600L
-        static constexpr BigNum nan_val(std::numeric_limits<double>::quiet_NaN(), 0, NoNormalizeTag{}); 
+        static constexpr BigNum nan_val(std::numeric_limits<man_t>::quiet_NaN(), 0, NoNormalizeTag{}); 
         #else
-        static constexpr BigNum nan_val(std::numeric_limits<double>::quiet_NaN(), 0, false);
+        static constexpr BigNum nan_val(std::numeric_limits<man_t>::quiet_NaN(), 0, false);
         #endif
 
         return nan_val;
     }
     static constexpr const BigNum& max() { 
         #if __cplusplus < 202600L
-        static constexpr const BigNum max_val(std::nextafter(10.0, 0.0f), std::numeric_limits<exp_t>::max(), NoNormalizeTag{}); 
+        // static constexpr const BigNum max_val(std::nextafter(10.0f, 0.0f), std::numeric_limits<exp_t>::max(), NoNormalizeTag{}); 
+        static constexpr const BigNum max_val(prev_float(10.0f), std::numeric_limits<exp_t>::max(), NoNormalizeTag{}); 
         #else
-        static constexpr const BigNum max_val(std::nextafter(10.0, 0.0f), std::numeric_limits<exp_t>::max(), false); 
+        static constexpr const BigNum max_val(std::nextafter(10.0f, 0.0f), std::numeric_limits<exp_t>::max(), false); 
         #endif
 
         return max_val;
     }
     static constexpr const BigNum& min() { 
         #if __cplusplus < 202600L
-        static constexpr const BigNum min_val(std::nextafter(-10.0, 0.0f), std::numeric_limits<exp_t>::max(), NoNormalizeTag{}); 
+        // static constexpr const BigNum min_val(std::nextafter(-10.0f, 0.0f), std::numeric_limits<exp_t>::max(), NoNormalizeTag{}); 
+        static constexpr const BigNum min_val(next_float(-10.0f), std::numeric_limits<exp_t>::max(), NoNormalizeTag{}); 
         #else
-        static constexpr const BigNum min_val(std::nextafter(-10.0, 0.0f), std::numeric_limits<exp_t>::max(), false); 
+        static constexpr const BigNum min_val(std::nextafter(-10.0f, 0.0f), std::numeric_limits<exp_t>::max(), false); 
         #endif
 
         return min_val;
@@ -257,6 +290,18 @@ public:
 
     // Arithmetic operations
     constexpr BigNum add(const BigNum& b) const {
+
+        // Handle special cases early
+        auto m_inf = std::numeric_limits<man_t>::infinity();
+        if (m == m_inf || b.m == m_inf) { return inf(); }
+        if (std::isnan(m) || std::isnan(b.m)) { return nan(); }
+
+        // Handle max and min cases early
+        if (*this == max() && b.m > 0.0f) { return max(); }
+        if (m > 0.0f && b == max()) { return max(); }
+        if (*this == min() && b.m < 0.0f) { return min(); }
+        if (m < 0.0f && b == min()) { return min(); }
+
         bool this_is_bigger = e > b.e;
         exp_t delta = this_is_bigger ? e - b.e : b.e - e;
         man_t m2;
