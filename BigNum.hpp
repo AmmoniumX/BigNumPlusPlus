@@ -478,7 +478,7 @@ public:
     CONSTEXPR_IF_CPP26 bool operator!=(const intmax_t other) const { return compare(BigNum(other)) != 0; }
 
     // Conversion methods
-    std::string to_string(const uint &precision=DefaultBigNumContext.print_precision) const {
+    constexpr std::string to_string(const uint &precision=DefaultBigNumContext.print_precision) const {
         if (this->is_inf()) { return "inf"; }
         if (this->is_nan()) { return "nan"; }
 
@@ -540,7 +540,7 @@ public:
 
     // Pretty string: 1234567 -> 1,234,567
     // Scientific notation is not affected
-    std::string to_pretty_string(const uint &precision=DefaultBigNumContext.print_precision) const {
+    constexpr std::string to_pretty_string(const uint &precision=DefaultBigNumContext.print_precision) const {
         std::string str = to_string(precision);
         
         // Early exit if in scientific notation or if the number is too small
@@ -555,11 +555,11 @@ public:
     }
 
     // Standard methods for (de)serialization
-    std::string serialize() const {
+    constexpr std::string serialize() const {
         return to_string(SERIAL_PRECISION);
     }
 
-    static BigNum deserialize(const std::string& str) {
+    static CONSTEXPR_IF_CPP26 BigNum deserialize(const std::string& str) {
         return BigNum(str);
     }
 
