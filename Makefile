@@ -1,6 +1,6 @@
 # recommended: c++26, minimum: c++23
 # if for some reason you need -ftrapping-math, add -DCONSTEXPR_NEXTAFTER_FALLBACK
-CXXFLAGS = -std=c++26 -Wall -Wextra -O3 -march=native -I. -fno-trapping-math
+CXXFLAGS = -std=c++26 -Wall -Wextra -O3 -march=native -I. -fno-trapping-math -fsanitize=address,undefined
 
 ALL = BigNumTest.out
 all: $(ALL)
