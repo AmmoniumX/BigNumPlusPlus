@@ -57,26 +57,26 @@ void assertIsClose(double expected, double actual, const std::string_view& testN
 
 void runInstantiationTests() {
     BigNum v1("1.23456789e123456789");
-    assertEquals("1.23e123456789"s, v1.to_string(2), "Instantiation from string (positive)");
+    assertEquals("1.23e123456789"s, v1.to_string(2), "Instantiation from string (positive)"sv);
     
     BigNum v2("-1.23456789e123456789");
-    assertEquals("-1.24e123456789"s, v2.to_string(2), "Instantiation from string (negative)");
+    assertEquals("-1.24e123456789"s, v2.to_string(2), "Instantiation from string (negative)"sv);
 
     BigNum v3("100");
-    assertEquals("100"s, v3.to_string(), "Instantiation from string (small positive)");
+    assertEquals("100"s, v3.to_string(), "Instantiation from string (small positive)"sv);
 
     BigNum v4("10");
-    assertEquals("10"s, v4.to_string(), "Instantiation from string (small positive 2)");
+    assertEquals("10"s, v4.to_string(), "Instantiation from string (small positive 2)"sv);
 
     BigNum v5("0");
-    assertEquals("0"s, v5.to_string(), "Instantiation from string (zero)");
+    assertEquals("0"s, v5.to_string(), "Instantiation from string (zero)"sv);
 
-    assertTrue(BigNum::inf().is_inf(), "BigNum::inf()");
-    assertTrue(BigNum::nan().is_nan(), "BigNum::nan()");
+    assertTrue(BigNum::inf().is_inf(), "BigNum::inf()"sv);
+    assertTrue(BigNum::nan().is_nan(), "BigNum::nan()"sv);
 
     BigNum v6(123456789L);
-    assertEquals("123456789"s, v6.to_string(), "Instantiation from integer");
-    assertEquals("123,456,789"s, v6.to_pretty_string(), "Pretty string formatting");
+    assertEquals("123456789"s, v6.to_string(), "Instantiation from integer"sv);
+    assertEquals("123,456,789"s, v6.to_pretty_string(), "Pretty string formatting"sv);
 }
 
 void runMathTests() {
@@ -86,21 +86,21 @@ void runMathTests() {
     BigNum v4("10");
     BigNum v5("0");
 
-    assertEquals(v5, v1 + v2, "Addition (positive + negative)");
-    assertEquals("-1.23e100"s, (v2 + v3).to_string(2), "Addition (negative + small positive)");
-    assertEquals(BigNum("110"), v3 + v4, "Addition (small positive + small positive)");
-    assertEquals(v4, v4 + v5, "Addition (small positive + zero)");
+    assertEquals(v5, v1 + v2, "Addition (positive + negative)"sv);
+    assertEquals("-1.23e100"s, (v2 + v3).to_string(2), "Addition (negative + small positive)"sv);
+    assertEquals(BigNum("110"), v3 + v4, "Addition (small positive + small positive)"sv);
+    assertEquals(v4, v4 + v5, "Addition (small positive + zero)"sv);
 
-    assertEquals("2.46e100"s, (v1 - v2).to_string(2), "Subtraction (positive - negative)");
-    assertEquals("-1.23e100"s, (v2 - v3).to_string(2), "Subtraction (negative - small positive)");
-    assertEquals(BigNum("90"), v3 - v4, "Subtraction (small positive - small positive)");
-    assertEquals(v4, v4 - v5, "Subtraction (small positive - zero)");
+    assertEquals("2.46e100"s, (v1 - v2).to_string(2), "Subtraction (positive - negative)"sv);
+    assertEquals("-1.23e100"s, (v2 - v3).to_string(2), "Subtraction (negative - small positive)"sv);
+    assertEquals(BigNum("90"), v3 - v4, "Subtraction (small positive - small positive)"sv);
+    assertEquals(v4, v4 - v5, "Subtraction (small positive - zero)"sv);
 
-    assertEquals(BigNum("1000"), v3 * v4, "Multiplication (small positive * small positive)");
-    assertEquals(v5, v4 * v5, "Multiplication (small positive * zero)");
+    assertEquals(BigNum("1000"), v3 * v4, "Multiplication (small positive * small positive)"sv);
+    assertEquals(v5, v4 * v5, "Multiplication (small positive * zero)"sv);
 
-    assertEquals(v4, v3 / v4, "Division (small positive / small positive)");
-    assertTrue((v4 / v5).is_nan(), "Division (small positive / zero)");
+    assertEquals(v4, v3 / v4, "Division (small positive / small positive)"sv);
+    assertTrue((v4 / v5).is_nan(), "Division (small positive / zero)"sv);
 }
 
 void runComparisonTests() {
@@ -110,21 +110,21 @@ void runComparisonTests() {
     BigNum v4("10");
     BigNum v5("0");
 
-    assertTrue(!(v1 < v2), "Comparison (v1 < v2)");
-    assertTrue(v1 > v2, "Comparison (v1 > v2)");
-    assertTrue(v1 != v2, "Comparison (v1 != v2)");
-    assertTrue(v1 > v3, "Comparison (v1 > v3)");
-    assertTrue(v1 > v4, "Comparison (v1 > v4)");
-    assertTrue(v1 > v5, "Comparison (v1 > v5)");
+    assertTrue(!(v1 < v2), "Comparison (v1 < v2)"sv);
+    assertTrue(v1 > v2, "Comparison (v1 > v2)"sv);
+    assertTrue(v1 != v2, "Comparison (v1 != v2)"sv);
+    assertTrue(v1 > v3, "Comparison (v1 > v3)"sv);
+    assertTrue(v1 > v4, "Comparison (v1 > v4)"sv);
+    assertTrue(v1 > v5, "Comparison (v1 > v5)"sv);
 
-    assertTrue(v2 < v3, "Comparison (v2 < v3)");
-    assertTrue(v2 < v4, "Comparison (v2 < v4)");
-    assertTrue(v2 < v5, "Comparison (v2 < v5)");
+    assertTrue(v2 < v3, "Comparison (v2 < v3)"sv);
+    assertTrue(v2 < v4, "Comparison (v2 < v4)"sv);
+    assertTrue(v2 < v5, "Comparison (v2 < v5)"sv);
 
-    assertTrue(v3 > v4, "Comparison (v3 > v4)");
-    assertTrue(v3 > v5, "Comparison (v3 > v5)");
+    assertTrue(v3 > v4, "Comparison (v3 > v4)"sv);
+    assertTrue(v3 > v5, "Comparison (v3 > v5)"sv);
     
-    assertTrue(v4 > v5, "Comparison (v4 > v5)");
+    assertTrue(v4 > v5, "Comparison (v4 > v5)"sv);
 }
 
 void runAdvancedMathTests() {
