@@ -23,7 +23,10 @@ Tradeoff: Cannot store numbers between (-1, 0) or (0, 1), but those aren't usual
 
 // std::log10 and std::pow are only constexpr in C++26 and above, 
 // so we define a macro to conditionally enable constexpr
-#if __cplusplus >= 202600L
+
+#define CPP26 (__cplusplus >= 202600L)
+
+#if CPP26
 #define CONSTEXPR_IF_CPP26 constexpr
 #else
 #define CONSTEXPR_IF_CPP26
@@ -155,11 +158,28 @@ private:
         return std::bit_cast<double>(bits);
     }
     #endif
+
+    // Add a fallback constexpr std::log10 if not on C++26
+    #if !CPP26
+    static constexpr int _log10(double x) {
+        assert(x > 0.0 && "x must be positive for log10");
+        int exponent = 0;
+        while (x >= 10.0) {
+            x /= 10.0;
+            ++exponent;
+        }
+        while (x < 1.0) {
+            x *= 10.0;
+            --exponent;
+        }
+        return exponent;
+    }
+    #endif
     
     // Before C++26, in order to qualify our constructor as constexpr,
     // we need a tag to indicate that normalization is not needed
     // (this is because normalize() is not constexpr before C++26 due to std::log10)
-    #if __cplusplus < 202600L
+    #if !CPP26
     struct NoNormalizeTag {}; // Tag to indicate normalization is not needed (needed for constexpr constructor)
     constexpr BigNum(const man_t mantissa, const exp_t exponent, [[maybe_unused]] const NoNormalizeTag& tag) : m(mantissa), e(exponent) {
     }
@@ -193,7 +213,7 @@ private:
 
 public:
     static constexpr const BigNum& inf() { 
-        #if __cplusplus < 202600L
+        #if !CPP26
         static constexpr BigNum inf_val(std::numeric_limits<man_t>::infinity(), 0, NoNormalizeTag{}); 
         #else
         static constexpr BigNum inf_val(std::numeric_limits<man_t>::infinity(), 0, false);
@@ -202,7 +222,7 @@ public:
         return inf_val;
     }
     static constexpr const BigNum& nan() { 
-        #if __cplusplus < 202600L
+        #if !CPP26
         static constexpr BigNum nan_val(std::numeric_limits<man_t>::quiet_NaN(), 0, NoNormalizeTag{}); 
         #else
         static constexpr BigNum nan_val(std::numeric_limits<man_t>::quiet_NaN(), 0, false);
@@ -211,7 +231,7 @@ public:
         return nan_val;
     }
     static constexpr const BigNum& max() { 
-        #if __cplusplus < 202600L
+        #if !CPP26
             #ifdef CONSTEXPR_NEXTAFTER_FALLBACK
                 static constexpr const BigNum max_val(_prev_double(10.0), std::numeric_limits<exp_t>::max(), NoNormalizeTag{}); 
             #else
@@ -224,7 +244,7 @@ public:
         return max_val;
     }
     static constexpr const BigNum& min() { 
-        #if __cplusplus < 202600L
+        #if !CPP26
             #ifdef CONSTEXPR_NEXTAFTER_FALLBACK
                 static constexpr const BigNum min_val(_next_double(-10.0), std::numeric_limits<exp_t>::max(), NoNormalizeTag{}); 
             #else
@@ -279,7 +299,13 @@ public:
         if (std::abs(m) < 1 && e == 0) { m = 0; return; } // Any number less than 1 is considered 0
         
         // Start normalization
-        int n_log = std::max(static_cast<int>(std::floor(std::log10(std::abs(m)))), 0);
+        int n_log;
+        #if !CPP26
+        n_log = std::max(_log10(std::abs(m)), 0);
+        #else
+        n_log = std::max(static_cast<int>(std::floor(std::log10(std::abs(m)))), 0);
+        #endif
+
         // if (n_log < 0) { n_log = 0; }
         m = m / (*Pow10::get(n_log));
         e += n_log;
