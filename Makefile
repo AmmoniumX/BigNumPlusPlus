@@ -1,6 +1,20 @@
+# Default compiler
+CXX ?= g++
+
 # recommended: c++26, minimum: c++23
+# Common flags
+CXXFLAGS = -std=c++26 -Wall -Wextra -O3 -I.
+
+# g++ specific flags
 # if for some reason you need -ftrapping-math, add -DCONSTEXPR_NEXTAFTER_FALLBACK
-CXXFLAGS = -std=c++26 -Wall -Wextra -O3 -march=native -I. -fno-trapping-math -fsanitize=address,undefined
+ifeq ($(CXX),g++)
+    CXXFLAGS += -march=native -fno-trapping-math -fsanitize=address,undefined
+endif
+
+# clang++ specific flags
+ifeq ($(CXX),clang++)
+    CXXFLAGS += -DCONSTEXPR_NEXTAFTER_FALLBACK
+endif
 
 ALL = BigNumTest.out
 all: $(ALL)
