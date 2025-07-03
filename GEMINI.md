@@ -29,16 +29,11 @@ The `BigNum` class represents a number as `m * 10^e`, where `m` is a `double` an
 
 ### Implementation Details
 
-#### `constexpr` and C++26
-
-The `BigNum` class is designed to be `constexpr`-friendly, allowing for compile-time calculations where possible. However, some C++ standard library functions like `std::log10` and `std::pow` are only `constexpr` in C++26 and later. To handle this, the `CONSTEXPR_IF_CPP26` macro is used to conditionally enable `constexpr` for methods that rely on these functions.
-
-For C++ versions prior to C++26, a tag dispatch mechanism (`NoNormalizeTag`) is used in the constructor to bypass the non-`constexpr` `normalize()` method when creating `constexpr` `BigNum` objects.
+The `BigNum` class is designed to be `constexpr`-friendly, allowing for compile-time calculations where possible. However, some C++ standard library functions like `std::log10` are only `constexpr` in C++26 and later. To handle this, some internal fallback functions are conditionally defined to allow `constexpr` for methods that rely on these functions.
 
 #### Preprocessor Macros
 
-- `CONSTEXPR_IF_CPP26`: As described above, this macro enables `constexpr` for methods that use C++26 `constexpr` functions.
-- `CONSTEXPR_NEXTAFTER_FALLBACK`: This macro provides a fallback for `std::nextafter` for compilers that do not support it in a `constexpr` context.
+- `CONSTEXPR_NEXTAFTER_FALLBACK`: This macro provides a fallback for `std::nextafter` for compilers that do not support it in a `constexpr` context. Particularly, gcc/g++ currently does not support this without `-fno-trapping-math`.
 
 #### Tradeoffs and Quirks
 
