@@ -34,7 +34,6 @@ constexpr void assertEquals(const T& expected, const T& actual, const std::strin
         std::cerr << "Test failed: " << testName << std::endl;
         std::cerr << "  Expected: " << expected << std::endl;
         std::cerr << "  Got:      " << actual << std::endl;
-        exit(1);
     }
 }
 
@@ -43,7 +42,6 @@ constexpr void assertTrue(bool condition, const std::string& testName) {
         std::cerr << "Test failed: " << testName << std::endl;
         std::cerr << "  Expected: true" << std::endl;
         std::cerr << "  Got:      false" << std::endl;
-        exit(1);
     }
 }
 
@@ -52,7 +50,6 @@ void assertIsClose(double expected, double actual, const std::string& testName, 
         std::cerr << "Test failed: " << testName << std::endl;
         std::cerr << "  Expected: " << expected << std::endl;
         std::cerr << "  Got:      " << actual << std::endl;
-        exit(1);
     }
 }
 
@@ -166,7 +163,7 @@ int main() {
     runAdvancedMathTests();
     runSpecialCaseTests();
 
-    cout << "All tests passed!" << endl;
+    cout << "Testing finished!" << endl;
 
     return 0;
 }

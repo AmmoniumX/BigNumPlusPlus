@@ -120,9 +120,9 @@ private:
         return out_str;
     }
 
-    // Helper functions since std::nextafter is not constexpr in gcc yet
-
-    static constexpr float prev_float(float x) {
+    // Helper functions since std::nextafter is not constexpr in gcc without -fno-trapping-math
+    #ifdef CONSTEXPR_NEXTAFTER_FALLBACK
+    static constexpr float _prev_float(float x) {
         using uint = std::uint32_t;
         static_assert(sizeof(float) == sizeof(uint), "Size of float and uint must be the same");
 
@@ -135,7 +135,7 @@ private:
         return std::bit_cast<float>(bits);
     }
 
-    static constexpr float next_float(float x) {
+    static constexpr float _next_float(float x) {
         using uint = std::uint32_t;
         static_assert(sizeof(float) == sizeof(uint), "Size of float and uint must be the same");
 
@@ -147,13 +147,14 @@ private:
         bits = (x > 0.0f) ? (bits + 1) : (bits - 1);
         return std::bit_cast<float>(bits);
     }
+    #endif
     
     // Before C++26, in order to qualify our constructor as constexpr,
     // we need a tag to indicate that normalization is not needed
     // (this is because normalize() is not constexpr before C++26 due to std::log10)
     #if __cplusplus < 202600L
     struct NoNormalizeTag {}; // Tag to indicate normalization is not needed (needed for constexpr constructor)
-    constexpr BigNum(const man_t mantissa, const exp_t exponent, [[gnu::unused]] const NoNormalizeTag& tag) : m(mantissa), e(exponent) {
+    constexpr BigNum(const man_t mantissa, const exp_t exponent, [[maybe_unused]] const NoNormalizeTag& tag) : m(mantissa), e(exponent) {
     }
     #endif
     
@@ -204,20 +205,26 @@ public:
     }
     static constexpr const BigNum& max() { 
         #if __cplusplus < 202600L
-        // static constexpr const BigNum max_val(std::nextafter(10.0f, 0.0f), std::numeric_limits<exp_t>::max(), NoNormalizeTag{}); 
-        static constexpr const BigNum max_val(prev_float(10.0f), std::numeric_limits<exp_t>::max(), NoNormalizeTag{}); 
+            #ifdef CONSTEXPR_NEXTAFTER_FALLBACK
+                static constexpr const BigNum max_val(_prev_float(10.0f), std::numeric_limits<exp_t>::max(), NoNormalizeTag{}); 
+            #else
+                static constexpr const BigNum max_val(std::nextafter(10.0f, 0.0f), std::numeric_limits<exp_t>::max(), NoNormalizeTag{}); 
+            #endif
         #else
-        static constexpr const BigNum max_val(std::nextafter(10.0f, 0.0f), std::numeric_limits<exp_t>::max(), false); 
+            static constexpr const BigNum max_val(std::nextafter(10.0f, 0.0f), std::numeric_limits<exp_t>::max(), false); 
         #endif
 
         return max_val;
     }
     static constexpr const BigNum& min() { 
         #if __cplusplus < 202600L
-        // static constexpr const BigNum min_val(std::nextafter(-10.0f, 0.0f), std::numeric_limits<exp_t>::max(), NoNormalizeTag{}); 
-        static constexpr const BigNum min_val(next_float(-10.0f), std::numeric_limits<exp_t>::max(), NoNormalizeTag{}); 
+            #ifdef CONSTEXPR_NEXTAFTER_FALLBACK
+                static constexpr const BigNum min_val(_next_float(-10.0f), std::numeric_limits<exp_t>::max(), NoNormalizeTag{}); 
+            #else
+                static constexpr const BigNum min_val(std::nextafter(-10.0f, 0.0f), std::numeric_limits<exp_t>::max(), NoNormalizeTag{}); 
+            #endif
         #else
-        static constexpr const BigNum min_val(std::nextafter(-10.0f, 0.0f), std::numeric_limits<exp_t>::max(), false); 
+            static constexpr const BigNum min_val(std::nextafter(-10.0f, 0.0f), std::numeric_limits<exp_t>::max(), false); 
         #endif
 
         return min_val;
