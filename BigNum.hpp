@@ -9,18 +9,17 @@ Tradeoff: Cannot store numbers between (-1, 0) or (0, 1), but those aren't usual
 #include <cmath>
 #include <algorithm>
 #include <string>
+#include <string_view>
 #include <optional>
 #include <sstream>
 #include <array>
 #include <limits>
 #include <cstdint>
-#include <inttypes.h>
 #include <cassert>
 #include <iostream>
 #include <iomanip>
 #include <type_traits>
 
-using namespace std::string_literals;
 
 // std::log10 and std::pow are only constexpr in C++26 and above, 
 // so we define a macro to conditionally enable constexpr
@@ -32,6 +31,8 @@ using namespace std::string_literals;
 
 // Constant precision for serializing
 namespace BigNumber {
+    using namespace std::literals::string_literals;
+
     static constexpr uint SERIAL_PRECISION = 9;
     static constexpr char DECIMAL_SEPARATOR = '.';
     static constexpr char THOUSANDS_SEPARATOR = ',';
@@ -70,8 +71,6 @@ namespace BigNumber {
             return Pow10Table[e + Pow10TableOffset];
         }
     };
-}
-using namespace BigNumber;
 
 class BigNum {
     using man_t = double;
@@ -84,15 +83,23 @@ private:
     man_t m = 0;
     exp_t e = 0;
     static_assert(std::is_floating_point_v<man_t>, "mantissa must be a floating point type");
-    static_assert(std::is_unsigned_v<exp_t>, "exponent must be an unsigned type");
+    static_assert(std::is_arithmetic_v<exp_t>, "exponent must be an arithmetic type");
 
-    static inline man_t strtom(const std::string &str) { 
-        static_assert(std::is_same_v<man_t, double>, "strtom must be specialized for the mantissa type");
-        return std::stod(str); 
+    static inline man_t strtom(const std::string_view &sv) { 
+        man_t m;
+        auto result = std::from_chars(sv.data(), sv.data() + sv.size(), m);
+        if (result.ec != std::errc()) {
+            throw std::invalid_argument("Failed to convert string to mantissa: " + std::string(sv));
+        }
+        return m;
     }
-    static inline exp_t strtoe(const std::string &str) { 
-        static_assert(std::is_same_v<exp_t, uintmax_t>, "strtoe must be specialized for the exponent type");
-        return strtoumax(str.c_str(), nullptr, 10); 
+    static inline exp_t strtoe(const std::string_view &sv) { 
+        exp_t e;
+        auto result = std::from_chars(sv.data(), sv.data() + sv.size(), e);
+        if (result.ec != std::errc()) {
+            throw std::invalid_argument("Failed to convert string to exponent: " + std::string(sv));
+        }
+        return e;
     }
     static std::string to_string_full(const double &value) {
         std::ostringstream out;
@@ -122,30 +129,30 @@ private:
 
     // Helper functions since std::nextafter is not constexpr in gcc without -fno-trapping-math
     #ifdef CONSTEXPR_NEXTAFTER_FALLBACK
-    static constexpr float _prev_float(float x) {
-        using uint = std::uint32_t;
-        static_assert(sizeof(float) == sizeof(uint), "Size of float and uint must be the same");
+    static constexpr double _prev_double(double x) {
+        using uint = std::uint64_t;
+        static_assert(sizeof(double) == sizeof(uint), "Size of float and uint must be the same");
 
-        if (x <= -std::numeric_limits<float>::infinity()) return -std::numeric_limits<float>::infinity();
+        if (x <= -std::numeric_limits<double>::infinity()) return -std::numeric_limits<double>::infinity();
         if (x != x) return x; // NaN
-        if (x == 0.0f) return -std::numeric_limits<float>::denorm_min();
+        if (x == 0.0l) return -std::numeric_limits<double>::denorm_min();
 
         uint bits = std::bit_cast<uint>(x);
         bits = (x > 0.0f) ? (bits - 1) : (bits + 1);
-        return std::bit_cast<float>(bits);
+        return std::bit_cast<double>(bits);
     }
 
-    static constexpr float _next_float(float x) {
-        using uint = std::uint32_t;
-        static_assert(sizeof(float) == sizeof(uint), "Size of float and uint must be the same");
+    static constexpr double _next_double(double x) {
+        using uint = std::uint64_t;
+        static_assert(sizeof(double) == sizeof(uint), "Size of float and uint must be the same");
 
-        if (x >= std::numeric_limits<float>::infinity()) return std::numeric_limits<float>::infinity();
+        if (x >= std::numeric_limits<double>::infinity()) return std::numeric_limits<double>::infinity();
         if (x != x) return x; // NaN
-        if (x == 0.0f) return std::numeric_limits<float>::denorm_min();
+        if (x == 0.0l) return std::numeric_limits<double>::denorm_min();
 
         uint bits = std::bit_cast<uint>(x);
         bits = (x > 0.0f) ? (bits + 1) : (bits - 1);
-        return std::bit_cast<float>(bits);
+        return std::bit_cast<double>(bits);
     }
     #endif
     
@@ -163,14 +170,14 @@ private:
         if (normalize) this->normalize();
     }
 
-    CONSTEXPR_IF_CPP26 void parseStr(const std::string& str) {
+    CONSTEXPR_IF_CPP26 void parseStr(const std::string_view& sv) {
         try {
-            size_t pos = str.find('e');
+            size_t pos = sv.find('e');
             if (pos != std::string::npos) {
-                m = strtom(str.substr(0, pos));
-                e = strtoe(str.substr(pos + 1));
+                m = strtom(sv.substr(0, pos));
+                e = strtoe(sv.substr(pos + 1));
             } else {
-                m = strtom(str);
+                m = strtom(sv);
                 e = 0;
             }
             normalize();
@@ -206,12 +213,12 @@ public:
     static constexpr const BigNum& max() { 
         #if __cplusplus < 202600L
             #ifdef CONSTEXPR_NEXTAFTER_FALLBACK
-                static constexpr const BigNum max_val(_prev_float(10.0f), std::numeric_limits<exp_t>::max(), NoNormalizeTag{}); 
+                static constexpr const BigNum max_val(_prev_double(10.0), std::numeric_limits<exp_t>::max(), NoNormalizeTag{}); 
             #else
-                static constexpr const BigNum max_val(std::nextafter(10.0f, 0.0f), std::numeric_limits<exp_t>::max(), NoNormalizeTag{}); 
+                static constexpr const BigNum max_val(std::nextafter(10.0, 0.0), std::numeric_limits<exp_t>::max(), NoNormalizeTag{}); 
             #endif
         #else
-            static constexpr const BigNum max_val(std::nextafter(10.0f, 0.0f), std::numeric_limits<exp_t>::max(), false); 
+            static constexpr const BigNum max_val(std::nextafter(10.0, 0.0), std::numeric_limits<exp_t>::max(), false); 
         #endif
 
         return max_val;
@@ -219,12 +226,12 @@ public:
     static constexpr const BigNum& min() { 
         #if __cplusplus < 202600L
             #ifdef CONSTEXPR_NEXTAFTER_FALLBACK
-                static constexpr const BigNum min_val(_next_float(-10.0f), std::numeric_limits<exp_t>::max(), NoNormalizeTag{}); 
+                static constexpr const BigNum min_val(_next_double(-10.0), std::numeric_limits<exp_t>::max(), NoNormalizeTag{}); 
             #else
-                static constexpr const BigNum min_val(std::nextafter(-10.0f, 0.0f), std::numeric_limits<exp_t>::max(), NoNormalizeTag{}); 
+                static constexpr const BigNum min_val(std::nextafter(-10.0, 0.0), std::numeric_limits<exp_t>::max(), NoNormalizeTag{}); 
             #endif
         #else
-            static constexpr const BigNum min_val(std::nextafter(-10.0f, 0.0f), std::numeric_limits<exp_t>::max(), false); 
+            static constexpr const BigNum min_val(std::nextafter(-10.0, 0.0), std::numeric_limits<exp_t>::max(), false); 
         #endif
 
         return min_val;
@@ -246,7 +253,7 @@ public:
         normalize();
     }
 
-    CONSTEXPR_IF_CPP26 BigNum(const std::string& str) {
+    CONSTEXPR_IF_CPP26 BigNum(const std::string_view& str) {
         parseStr(str);
     }
 
@@ -402,26 +409,26 @@ public:
 
     // Operator overloads
     constexpr BigNum operator+(const BigNum& other) const { return add(other); }
-    CONSTEXPR_IF_CPP26 BigNum operator+(const std::string& other) const { return add(BigNum(other)); }
+    CONSTEXPR_IF_CPP26 BigNum operator+(const std::string_view& other) const { return add(BigNum(other)); }
     constexpr BigNum operator+(const intmax_t other) const { return add(BigNum(other)); }
     constexpr BigNum operator-(const BigNum& other) const { return sub(other); }
-    CONSTEXPR_IF_CPP26 BigNum operator-(const std::string& other) const { return sub(BigNum(other)); }
+    CONSTEXPR_IF_CPP26 BigNum operator-(const std::string_view& other) const { return sub(BigNum(other)); }
     constexpr BigNum operator-(const intmax_t other) const { return sub(BigNum(other)); }
     constexpr BigNum operator*(const BigNum& other) const { return mul(other); }
-    CONSTEXPR_IF_CPP26 BigNum operator*(const std::string& other) const { return mul(BigNum(other)); }
+    CONSTEXPR_IF_CPP26 BigNum operator*(const std::string_view& other) const { return mul(BigNum(other)); }
     constexpr BigNum operator*(const intmax_t other) const { return mul(BigNum(other)); }
     constexpr BigNum operator/(const BigNum& other) const { return div(other); }
-    CONSTEXPR_IF_CPP26 BigNum operator/(const std::string& other) const { return div(BigNum(other)); }
+    CONSTEXPR_IF_CPP26 BigNum operator/(const std::string_view& other) const { return div(BigNum(other)); }
     constexpr BigNum operator/(const intmax_t other) const { return div(BigNum(other)); }
     constexpr BigNum operator-() const { return negate(); }
-    CONSTEXPR_IF_CPP26 BigNum& operator+=(const std::string& b) { return *this += BigNum(b); }
+    CONSTEXPR_IF_CPP26 BigNum& operator+=(const std::string_view& b) { return *this += BigNum(b); }
     constexpr BigNum& operator+=(const intmax_t b) { return *this += BigNum(b); }
     CONSTEXPR_IF_CPP26 BigNum& operator-=(const BigNum& b) { return *this += BigNum(b.m * -1, b.e); }
-    CONSTEXPR_IF_CPP26 BigNum& operator-=(const std::string& b) { return *this -= BigNum(b); }
+    CONSTEXPR_IF_CPP26 BigNum& operator-=(const std::string_view& b) { return *this -= BigNum(b); }
     constexpr BigNum& operator-=(const intmax_t b) { return *this -= BigNum(b); }
-    CONSTEXPR_IF_CPP26 BigNum& operator*=(const std::string& b) { return *this *= BigNum(b); }
+    CONSTEXPR_IF_CPP26 BigNum& operator*=(const std::string_view& b) { return *this *= BigNum(b); }
     constexpr BigNum& operator*=(const intmax_t b) { return *this *= BigNum(b); }
-    CONSTEXPR_IF_CPP26 BigNum& operator/=(const std::string& b) { return *this /= BigNum(b); }
+    CONSTEXPR_IF_CPP26 BigNum& operator/=(const std::string_view& b) { return *this /= BigNum(b); }
     constexpr BigNum& operator/=(const intmax_t b) { return *this /= BigNum(b); }
     CONSTEXPR_IF_CPP26 BigNum& operator++() { return *this += BigNum(static_cast<intmax_t>(1)); }
     CONSTEXPR_IF_CPP26 BigNum operator++(int) { BigNum temp(*this); *this += BigNum(static_cast<intmax_t>(1)); return temp; }
@@ -459,22 +466,22 @@ public:
 
     // Comparison operator overloads
     constexpr bool operator<(const BigNum& other) const { return compare(other) < 0; }
-    CONSTEXPR_IF_CPP26 bool operator<(const std::string& other) const { return compare(BigNum(other)) < 0; }
+    CONSTEXPR_IF_CPP26 bool operator<(const std::string_view& other) const { return compare(BigNum(other)) < 0; }
     CONSTEXPR_IF_CPP26 bool operator<(const intmax_t other) const { return compare(BigNum(other)) < 0; }
     constexpr bool operator<=(const BigNum& other) const { return compare(other) <= 0; }
-    CONSTEXPR_IF_CPP26 bool operator<=(const std::string& other) const { return compare(BigNum(other)) <= 0; }
+    CONSTEXPR_IF_CPP26 bool operator<=(const std::string_view& other) const { return compare(BigNum(other)) <= 0; }
     CONSTEXPR_IF_CPP26 bool operator<=(const intmax_t other) const { return compare(BigNum(other)) <= 0; }
     constexpr bool operator>(const BigNum& other) const { return compare(other) > 0; }
-    CONSTEXPR_IF_CPP26 bool operator>(const std::string& other) const { return compare(BigNum(other)) > 0; }
+    CONSTEXPR_IF_CPP26 bool operator>(const std::string_view& other) const { return compare(BigNum(other)) > 0; }
     CONSTEXPR_IF_CPP26 bool operator>(const intmax_t other) const { return compare(BigNum(other)) > 0; }
     constexpr bool operator>=(const BigNum& other) const { return compare(other) >= 0; }
-    CONSTEXPR_IF_CPP26 bool operator>=(const std::string& other) const { return compare(BigNum(other)) >= 0; }
+    CONSTEXPR_IF_CPP26 bool operator>=(const std::string_view& other) const { return compare(BigNum(other)) >= 0; }
     CONSTEXPR_IF_CPP26 bool operator>=(const intmax_t other) const { return compare(BigNum(other)) >= 0; }
     // bool operator==(const BigNum& other) const { return compare(other) == 0; } // Replaced by default operator==
-    CONSTEXPR_IF_CPP26 bool operator==(const std::string& other) const { return compare(BigNum(other)) == 0; }
+    CONSTEXPR_IF_CPP26 bool operator==(const std::string_view& other) const { return compare(BigNum(other)) == 0; }
     CONSTEXPR_IF_CPP26 bool operator==(const intmax_t other) const { return compare(BigNum(other)) == 0; }
     constexpr bool operator!=(const BigNum& other) const { return compare(other) != 0; }
-    CONSTEXPR_IF_CPP26 bool operator!=(const std::string& other) const { return compare(BigNum(other)) != 0; }
+    CONSTEXPR_IF_CPP26 bool operator!=(const std::string_view& other) const { return compare(BigNum(other)) != 0; }
     CONSTEXPR_IF_CPP26 bool operator!=(const intmax_t other) const { return compare(BigNum(other)) != 0; }
 
     // Conversion methods
@@ -559,7 +566,7 @@ public:
         return to_string(SERIAL_PRECISION);
     }
 
-    static CONSTEXPR_IF_CPP26 BigNum deserialize(const std::string& str) {
+    static CONSTEXPR_IF_CPP26 BigNum deserialize(const std::string_view& str) {
         return BigNum(str);
     }
 
@@ -701,3 +708,8 @@ static_assert(std::copyable<BigNum>);
 static_assert(std::default_initializable<BigNum>);
 static_assert(std::semiregular<BigNum>);
 static_assert(std::regular<BigNum>);
+
+}
+
+// Expose BigNum to the global namespace
+using BigNumber::BigNum;

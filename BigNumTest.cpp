@@ -3,12 +3,14 @@
 #include <cassert>
 #include <cmath>
 #include <string>
+#include <string_view>
 #include <sstream>
 #include <optional>
+#include <print>
 
 #include "BigNum.hpp"
 
-using namespace std;
+using namespace std::literals::string_literals;
 
 // Helper to convert anything to a string for printing
 template <typename T>
@@ -31,25 +33,23 @@ std::string to_string_test(const bool value) {
 template <typename T>
 constexpr void assertEquals(const T& expected, const T& actual, const std::string& testName) {
     if (expected != actual) {
-        std::cerr << "Test failed: " << testName << std::endl;
-        std::cerr << "  Expected: " << expected << std::endl;
-        std::cerr << "  Got:      " << actual << std::endl;
+        std::println(stderr, "Test failed: {}", testName);
+        std::println(stderr, "  Expected: {}", to_string_test(expected));
+        std::println(stderr, "  Got:      {}", to_string_test(actual));
     }
 }
 
 constexpr void assertTrue(bool condition, const std::string& testName) {
     if (!condition) {
-        std::cerr << "Test failed: " << testName << std::endl;
-        std::cerr << "  Expected: true" << std::endl;
-        std::cerr << "  Got:      false" << std::endl;
+        std::println(stderr, "Test failed: {}", testName);
     }
 }
 
 void assertIsClose(double expected, double actual, const std::string& testName, double tolerance = 1e-5) {
     if (std::abs(expected - actual) > tolerance) {
-        std::cerr << "Test failed: " << testName << std::endl;
-        std::cerr << "  Expected: " << expected << std::endl;
-        std::cerr << "  Got:      " << actual << std::endl;
+        std::println(stderr, "Test failed: {}", testName);
+        std::println(stderr, "  Expected: {}", expected);
+        std::println(stderr, "  Got:      {}", actual);
     }
 }
 
@@ -155,7 +155,7 @@ void runSpecialCaseTests() {
 }
 
 int main() {
-    cout << "Running tests..." << endl;
+    std::println("Running tests...");
     
     runInstantiationTests();
     runMathTests();
@@ -163,7 +163,7 @@ int main() {
     runAdvancedMathTests();
     runSpecialCaseTests();
 
-    cout << "Testing finished!" << endl;
+    std::println("Testing finished!");
 
     return 0;
 }
