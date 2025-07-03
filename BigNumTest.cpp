@@ -11,6 +11,7 @@
 #include "BigNum.hpp"
 
 using namespace std::literals::string_literals;
+using namespace std::literals::string_view_literals;
 
 // Helper to convert anything to a string for printing
 template <typename T>
@@ -31,7 +32,7 @@ std::string to_string_test(const bool value) {
 }
 
 template <typename T>
-constexpr void assertEquals(const T& expected, const T& actual, const std::string& testName) {
+constexpr void assertEquals(const T& expected, const T& actual, const std::string_view& testName) {
     if (expected != actual) {
         std::println(stderr, "Test failed: {}", testName);
         std::println(stderr, "  Expected: {}", to_string_test(expected));
@@ -39,13 +40,13 @@ constexpr void assertEquals(const T& expected, const T& actual, const std::strin
     }
 }
 
-constexpr void assertTrue(bool condition, const std::string& testName) {
+constexpr void assertTrue(bool condition, const std::string_view& testName) {
     if (!condition) {
         std::println(stderr, "Test failed: {}", testName);
     }
 }
 
-void assertIsClose(double expected, double actual, const std::string& testName, double tolerance = 1e-5) {
+void assertIsClose(double expected, double actual, const std::string_view& testName, double tolerance = 1e-5) {
     if (std::abs(expected - actual) > tolerance) {
         std::println(stderr, "Test failed: {}", testName);
         std::println(stderr, "  Expected: {}", expected);
@@ -127,31 +128,31 @@ void runComparisonTests() {
 }
 
 void runAdvancedMathTests() {
-    assertEquals(BigNum(static_cast<intmax_t>(256)), BigNum(static_cast<intmax_t>(16)).pow(2.0), "pow(2.0)");
-    assertEquals(BigNum(static_cast<intmax_t>(8)), BigNum(static_cast<intmax_t>(64)).sqrt(), "sqrt()");
-    assertEquals(BigNum("1e6"), BigNum(static_cast<intmax_t>(10)).pow(6.0), "pow(6.0)");
-    assertEquals(BigNum(static_cast<intmax_t>(42)), BigNum(static_cast<intmax_t>(42)).pow(2.0).sqrt(), "sqrt(pow(2.0))");
-    assertEquals(BigNum(static_cast<intmax_t>(3)), BigNum(static_cast<intmax_t>(27)).root(3), "root(3)");
+    assertEquals(BigNum(static_cast<intmax_t>(256)), BigNum(static_cast<intmax_t>(16)).pow(2.0), "pow(2.0)"sv);
+    assertEquals(BigNum(static_cast<intmax_t>(8)), BigNum(static_cast<intmax_t>(64)).sqrt(), "sqrt()"sv);
+    assertEquals(BigNum("1e6"), BigNum(static_cast<intmax_t>(10)).pow(6.0), "pow(6.0)"sv);
+    assertEquals(BigNum(static_cast<intmax_t>(42)), BigNum(static_cast<intmax_t>(42)).pow(2.0).sqrt(), "sqrt(pow(2.0))"sv);
+    assertEquals(BigNum(static_cast<intmax_t>(3)), BigNum(static_cast<intmax_t>(27)).root(3), "root(3)"sv);
 
     auto log1 = BigNum(static_cast<intmax_t>(12345)).log10();
-    assertTrue(log1.has_value(), "log10(12345) exists");
-    assertIsClose(4.09149, *log1, "log10(12345) value");
+    assertTrue(log1.has_value(), "log10(12345) exists"sv);
+    assertIsClose(4.09149, *log1, "log10(12345) value"sv);
 
     auto log2 = BigNum("1.234e1000").log10();
-    assertTrue(log2.has_value(), "log10(1.234e1000) exists");
-    assertIsClose(1000.0913, *log2, "log10(1.234e1000) value", 1e-4);
+    assertTrue(log2.has_value(), "log10(1.234e1000) exists"sv);
+    assertIsClose(1000.0913, *log2, "log10(1.234e1000) value"sv, 1e-4);
 }
 
 void runSpecialCaseTests() {
-    assertTrue(BigNum::inf().is_inf(), "BigNum::inf() is infinity");
-    assertTrue(BigNum::nan().is_nan(), "BigNum::nan() is NaN");
+    assertTrue(BigNum::inf().is_inf(), "BigNum::inf() is infinity"sv);
+    assertTrue(BigNum::nan().is_nan(), "BigNum::nan() is NaN"sv);
 
-    assertTrue((BigNum::inf() + BigNum::inf()) == BigNum::inf(), "BigNum::inf() + BigNum::inf() is still infinity");
-    assertTrue((BigNum::nan() + BigNum::nan()).is_nan(), "BigNum::nan() + BigNum::nan() is NaN");
-    assertTrue(!(BigNum::nan() == BigNum::nan()), "BigNum::nan() is not equal to itself");
+    assertTrue((BigNum::inf() + BigNum::inf()) == BigNum::inf(), "BigNum::inf() + BigNum::inf() is still infinity"sv);
+    assertTrue((BigNum::nan() + BigNum::nan()).is_nan(), "BigNum::nan() + BigNum::nan() is NaN"sv);
+    assertTrue(!(BigNum::nan() == BigNum::nan()), "BigNum::nan() is not equal to itself"sv);
 
-    assertTrue((BigNum::max() + 1) == BigNum::max(), "BigNum::max() + 1 is still max");
-    assertTrue((BigNum::min() - 1) == BigNum::min(), "BigNum::min() - 1 is still min");
+    assertTrue((BigNum::max() + 1) == BigNum::max(), "BigNum::max() + 1 is still max"sv);
+    assertTrue((BigNum::min() - 1) == BigNum::min(), "BigNum::min() - 1 is still min"sv);
 }
 
 int main() {
