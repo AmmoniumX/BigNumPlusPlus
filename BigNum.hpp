@@ -96,9 +96,9 @@ private:
         }
         return e;
     }
-    static std::string to_string_full(const double &value) {
+    static std::string to_string_full(const man_t &value) {
         std::ostringstream out;
-        out << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << value;
+        out << std::setprecision(std::numeric_limits<man_t>::digits10 + 1) << value;
         return out.str();
     }
     static std::string to_string_floor(const double &value, const int &precision) {
