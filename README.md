@@ -6,3 +6,6 @@ Numbers are represented internally as `m × 10^e`, using `double m` and `uintmax
 Do note that `e` is unsigned. This maximizes Emax, at the cost of Emin being 0.
 
 Maximum representable value is `10 × 10^ numeric_limits<uintmax_t>::max()`.
+
+## Build information
+You can generate a `compile_commands.json` file by running `bear -- make`.
