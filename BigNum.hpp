@@ -21,6 +21,20 @@ Tradeoff: Cannot store numbers between (-1, 0) or (0, 1), but those aren't usual
 #include <type_traits>
 
 
+// Define a macro for deducing CONSTEXPR_NEXTAFTER_FALLBACK
+#if defined(__clang__)
+// Clang does NOT support constexpr std::nextafter as of now
+#define CONSTEXPR_NEXTAFTER_FALLBACK
+#elif defined(__GNUC__)
+// It's safe to use constexpr nextafter if we compile with -fno-trapping-math
+#ifndef NO_TRAPPING_MATH
+#define CONSTEXPR_NEXTAFTER_FALLBACK
+#endif
+#else
+// For other compilers, be conservative
+#define CONSTEXPR_NEXTAFTER_FALLBACK
+#endif
+
 // Define a macro for CPP26 and later for constexpr statements
 #define CPP26 (__cplusplus >= 202600L)
 

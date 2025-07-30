@@ -1,14 +1,14 @@
 # Default compiler
 CXX ?= g++
 
-# recommended: c++26, minimum: c++23
+# recommended: gnu++26, minimum: c++23
 # Common flags
-CXXFLAGS = -std=c++26 -Wall -Wextra -O3 -I.
+CXXFLAGS = -std=gnu++26 -Wall -Wextra -O3 -I.
 
 # g++ specific flags
 # if for some reason you need -ftrapping-math, add -DCONSTEXPR_NEXTAFTER_FALLBACK
 ifeq ($(CXX),g++)
-    CXXFLAGS += -march=native -fno-trapping-math -fsanitize=address,undefined
+    CXXFLAGS += -march=native -fno-trapping-math -DNO_TRAPPING_MATH -fsanitize=address,undefined
 endif
 
 # clang++ specific flags
