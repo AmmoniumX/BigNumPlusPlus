@@ -546,8 +546,10 @@ public:
     // We do not need to normalize here, as we assume the numbers are already
     // normalized BigNum a = *this; a.normalize(); b.normalize();
 
-    if (is_nan() || b.is_nan()) return std::partial_ordering::unordered;
-    if (is_inf() && b.is_inf()) return std::partial_ordering::equivalent;
+    if (is_nan() || b.is_nan())
+      return std::partial_ordering::unordered;
+    if (is_inf() && b.is_inf())
+      return std::partial_ordering::equivalent;
     if (m == b.m && e == b.e)
       return std::partial_ordering::equivalent;
     if (is_positive() && b.is_negative())
@@ -576,7 +578,8 @@ public:
   // already normalized)
   constexpr bool operator==(const BigNum &other) const = default;
 
-  constexpr std::partial_ordering operator<=>(const std::string_view &other) const {
+  constexpr std::partial_ordering
+  operator<=>(const std::string_view &other) const {
     return *this <=> BigNum(other);
   }
   constexpr std::partial_ordering operator<=>(const man_t other) const {
