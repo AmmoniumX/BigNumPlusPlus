@@ -542,37 +542,35 @@ public:
   static constexpr BigNum &min(BigNum &a, BigNum &b) { return a < b ? a : b; }
 
   constexpr std::partial_ordering operator<=>(const BigNum &b) const {
-
-    // We do not need to normalize here, as we assume the numbers are already
-    // normalized BigNum a = *this; a.normalize(); b.normalize();
-
     if (is_nan() || b.is_nan())
       return std::partial_ordering::unordered;
+  
     if (is_inf() && b.is_inf())
       return std::partial_ordering::equivalent;
+  
     if (m == b.m && e == b.e)
       return std::partial_ordering::equivalent;
-    if (is_positive() && b.is_negative())
+  
+    const bool a_pos = is_positive();
+    const bool b_pos = b.is_positive();
+  
+    if (a_pos && !b_pos)
       return std::partial_ordering::greater;
-    if (is_negative() && b.is_positive())
+    if (!a_pos && b_pos)
       return std::partial_ordering::less;
-    if (is_positive() && b.is_positive() && e > b.e)
-      return std::partial_ordering::greater;
-    if (is_positive() && b.is_positive() && e < b.e)
-      return std::partial_ordering::less;
-    if (is_negative() && b.is_negative() && e > b.e)
-      return std::partial_ordering::less;
-    if (is_negative() && b.is_negative() && e < b.e)
-      return std::partial_ordering::greater;
-    if (is_positive() && m > b.m)
-      return std::partial_ordering::greater;
-    if (is_positive() && m < b.m)
-      return std::partial_ordering::less;
-    if (is_negative() && m > b.m)
-      return std::partial_ordering::less;
-    if (is_negative() && m < b.m)
-      return std::partial_ordering::greater;
-    return std::partial_ordering::equivalent;
+  
+    // At this point: both have the same sign (positive or negative)
+    if (a_pos) {
+      if (e > b.e) return std::partial_ordering::greater;
+      if (e < b.e) return std::partial_ordering::less;
+      if (m > b.m) return std::partial_ordering::greater;
+      return std::partial_ordering::less; // m != b.m, and m < b.m
+    } else {
+      if (e > b.e) return std::partial_ordering::less;
+      if (e < b.e) return std::partial_ordering::greater;
+      if (m > b.m) return std::partial_ordering::less;
+      return std::partial_ordering::greater; // m != b.m, and m < b.m
+    }
   }
   // Equality operator (only use this under the assumption that the numbers are
   // already normalized)
