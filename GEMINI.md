@@ -1,20 +1,13 @@
 This is a C++ project that implements a big number library.
 
-## Building the project
+## Building the project and running tests
 
-To build the project, run the following command:
-
-```bash
-make
-```
-
-## Running the project
-
-To run the project, run the following command:
+To build the project and run the tests, run the following command:
 
 ```bash
-./BigNum.out
+make && ./BigNumTest.out
 ```
+
 
 ## Project Overview
 
