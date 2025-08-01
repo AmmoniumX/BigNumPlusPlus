@@ -277,13 +277,6 @@ public:
     normalize();
   }
 
-  // constexpr BigNum(const intmax_t val) {
-  //     m = static_cast<man_t>(val);
-  //     e = 0;
-  //     if (val == 0) { e = 0; } // For 0, set exponent to 0
-  //     normalize();
-  // }
-
   constexpr BigNum(const std::string_view &str) { parseStr(str); }
 
   // Default methods to satisfy concepts
