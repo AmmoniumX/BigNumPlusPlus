@@ -293,10 +293,6 @@ public:
   constexpr BigNum(BigNum &&) = default;                 // Move constructor
   constexpr BigNum &operator=(BigNum &&) = default;      // Move assignment
 
-  // Equality operator (only use this under the assumption that the numbers are
-  // already normalized)
-  constexpr bool operator==(const BigNum &other) const = default;
-
   ~BigNum() = default; // Destructor
 
   // Normalization: mantissa set in range (-10, 1] and [1, 10)
@@ -552,40 +548,45 @@ public:
   static constexpr BigNum &max(BigNum &a, BigNum &b) { return a > b ? a : b; }
   static constexpr BigNum &min(BigNum &a, BigNum &b) { return a < b ? a : b; }
 
-  constexpr std::strong_ordering operator<=>(const BigNum &b) const {
+  constexpr std::partial_ordering operator<=>(const BigNum &b) const {
 
     // We do not need to normalize here, as we assume the numbers are already
     // normalized BigNum a = *this; a.normalize(); b.normalize();
 
+    if (is_nan() || b.is_nan()) return std::partial_ordering::unordered;
+    if (is_inf() && b.is_inf()) return std::partial_ordering::equivalent;
     if (m == b.m && e == b.e)
-      return std::strong_ordering::equal;
+      return std::partial_ordering::equivalent;
     if (is_positive() && b.is_negative())
-      return std::strong_ordering::greater;
+      return std::partial_ordering::greater;
     if (is_negative() && b.is_positive())
-      return std::strong_ordering::less;
+      return std::partial_ordering::less;
     if (is_positive() && b.is_positive() && e > b.e)
-      return std::strong_ordering::greater;
+      return std::partial_ordering::greater;
     if (is_positive() && b.is_positive() && e < b.e)
-      return std::strong_ordering::less;
+      return std::partial_ordering::less;
     if (is_negative() && b.is_negative() && e > b.e)
-      return std::strong_ordering::less;
+      return std::partial_ordering::less;
     if (is_negative() && b.is_negative() && e < b.e)
-      return std::strong_ordering::greater;
+      return std::partial_ordering::greater;
     if (is_positive() && m > b.m)
-      return std::strong_ordering::greater;
+      return std::partial_ordering::greater;
     if (is_positive() && m < b.m)
-      return std::strong_ordering::less;
+      return std::partial_ordering::less;
     if (is_negative() && m > b.m)
-      return std::strong_ordering::less;
+      return std::partial_ordering::less;
     if (is_negative() && m < b.m)
-      return std::strong_ordering::greater;
-    return std::strong_ordering::equal;
+      return std::partial_ordering::greater;
+    return std::partial_ordering::equivalent;
   }
+  // Equality operator (only use this under the assumption that the numbers are
+  // already normalized)
+  constexpr bool operator==(const BigNum &other) const = default;
 
-  constexpr std::strong_ordering operator<=>(const std::string_view &other) const {
+  constexpr std::partial_ordering operator<=>(const std::string_view &other) const {
     return *this <=> BigNum(other);
   }
-  constexpr std::strong_ordering operator<=>(const man_t other) const {
+  constexpr std::partial_ordering operator<=>(const man_t other) const {
     return *this <=> BigNum(other);
   }
 
