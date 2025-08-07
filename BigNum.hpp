@@ -24,7 +24,11 @@ the types of games that would use this library
 #include <string_view>
 #include <type_traits>
 
-// Define a macro for deducing CONSTEXPR_NEXTAFTER_FALLBACK
+/* Define a macro for deducing CONSTEXPR_NEXTAFTER_FALLBACK
+ * We do this because std::nextafter is not properly constepxr in most compilers
+ * yet, so if we conclude that it's not constexpr, we use our own fallback
+ * implementation
+ */
 #if defined(__clang__)
 // Clang does NOT support constexpr std::nextafter as of now
 #define CONSTEXPR_NEXTAFTER_FALLBACK
@@ -49,14 +53,17 @@ static constexpr uint SERIAL_PRECISION = 9;
 static constexpr char DECIMAL_SEPARATOR = '.';
 static constexpr char THOUSANDS_SEPARATOR = ',';
 
+// Formatting context
 struct BigNumContext {
     uint max_digits = 10; // Up to how many "real" digits to display before
                           // using scientific notation
     uint print_precision =
         3; // How many fractional digits to display on scientific notation
 };
+// Global "default" context when none is passed to functions
 inline BigNumContext DefaultBigNumContext;
 
+// Precompute powers-of-10 table for performance
 static constexpr int Pow10TableOffset =
     std::numeric_limits<double>::max_exponent10;
 static constexpr int Pow10TableSize = 2 * Pow10TableOffset + 1;
@@ -90,20 +97,22 @@ class Pow10 {
 };
 
 class BigNum {
-    using man_t = double;
-    using exp_t = uintmax_t;
+    using man_t = double;    // mantissa type
+    using exp_t = uintmax_t; // exponent type
 
     friend std::ostream &operator<<(std::ostream &os, const BigNum &bn);
     friend std::istream &operator>>(std::istream &is, BigNum &bn);
 
   private:
-    man_t m = 0;
-    exp_t e = 0;
+    man_t m = 0; // mantissa
+    exp_t e = 0; // exponent (base 10)
     static_assert(std::is_floating_point_v<man_t>,
                   "mantissa must be a floating point type");
     static_assert(std::is_arithmetic_v<exp_t>,
                   "exponent must be an arithmetic type");
 
+    static constexpr exp_t MAX_DIV_DIFF = 308;
+    // helper functions to convert strings to mantissa/exponent
     static inline man_t strtom(const std::string_view &sv) {
         man_t m;
         auto result = std::from_chars(sv.data(), sv.data() + sv.size(), m);
@@ -122,12 +131,16 @@ class BigNum {
         }
         return e;
     }
+
+    // convert the number to a full-precision string
     static std::string to_string_full(const man_t &value) {
         std::ostringstream out;
         out << std::setprecision(std::numeric_limits<man_t>::digits10 + 1)
             << value;
         return out.str();
     }
+
+    // convert double to string, rounding down and up to specific precision
     static std::string to_string_floor(const double &value,
                                        const int &precision) {
         // Assumes value is normalized to 1 digit before the decimal point
@@ -151,8 +164,7 @@ class BigNum {
         return out_str;
     }
 
-// Helper functions since std::nextafter is not constexpr in gcc without
-// -fno-trapping-math
+// Fallback implemnetation in case of non-constexpr std::nextafter
 #ifdef CONSTEXPR_NEXTAFTER_FALLBACK
     static constexpr double _prev_double(double x) {
         using uint = std::uint64_t;
@@ -189,7 +201,7 @@ class BigNum {
     }
 #endif
 
-// Add a fallback constexpr std::log10 if not on C++26
+// Fallback to constexpr std::log10 if not on C++26
 #if !CPP26
     static constexpr int _log10(double x) {
         assert(x > 0.0 && "x must be positive for log10");
@@ -294,7 +306,6 @@ class BigNum {
 
     // Normalization: mantissa set in range (-10, 10)
     constexpr void normalize() {
-        // std::println("\nNormalizing BigNum: m = {}, e = {}", m, e);
         if (*this == max() || *this == min()) {
             return;
         }
@@ -309,10 +320,8 @@ class BigNum {
         if (m == 0) {
             e = 0;
             return;
-        } // For m = 0, set exponent to 0
+        }
         if (std::abs(m) < 1 && e == 0) {
-            // m = 0;
-            // std::println("No change");
             return;
         }
 
@@ -324,15 +333,10 @@ class BigNum {
         n_log =
             std::max(static_cast<int>(std::floor(std::log10(std::abs(m)))), 0);
 #endif
-        // std::println("n_log: {}", n_log);
 
         // if (n_log < 0) { n_log = 0; }
         m = m / (*Pow10::get(n_log));
         e += n_log;
-
-        // // Any number less than 1 is considered 0
-        // if (e == 0) { m = floor(m); }
-        // m = (std::abs(m) < 1 && e == 0) ? 0 : m;
 
         // Clamp between max and min
         if (*this > max()) {
@@ -349,7 +353,6 @@ class BigNum {
             m = std::round(m * target_precision) / target_precision;
             // m = std::floor(m * target_precision) / target_precision;
         }
-        // std::println("Normalized BigNum: m = {}, e = {}", m, e);
     }
 
     // Arithmetic operations
@@ -411,22 +414,17 @@ class BigNum {
     }
 
     constexpr BigNum div(const BigNum &b) const {
-        // std::println("\nDividing BigNum({}, {}) / BigNum({}, {})", m, e, b.m,
-        // b.e); division by zero, return NaN
+        // Division by zero, return NaN
         if (b.m == 0) {
             return nan();
         }
 
         // Divisor is significantly larger than dividend, result is 0
-        static constexpr exp_t MAX_DIV_DIFF = 308;
-        // auto diff = b.e - e;
         if ((b.e > e) && (b.e - e >= MAX_DIV_DIFF)) {
-            // std::println("Difference too large ({}), returning 0", diff);
             return BigNum(static_cast<man_t>(0));
         }
 
         // Perform division
-        // std::println("Performing standard division");
         return BigNum(m / b.m, e - b.e);
     }
 
@@ -462,15 +460,11 @@ class BigNum {
 
     constexpr BigNum &operator/=(const BigNum &b) {
         if (b.m == 0) {
-            // division by zero, return NaN
+            // Division by zero, return NaN
             m = nan().m;
             e = nan().e;
-        } else if (b.e > e) {
-            // Divisor is larger than dividend, result is 0
-            m = 0;
-            e = 0;
-        } else if (b.e == e && std::abs(m / b.m) < 1) {
-            // Any number less than 1 is considered 0
+        } else if ((b.e > e) && (b.e - e >= MAX_DIV_DIFF)) {
+            // Divisor is significantly larger than dividend, result is 0
             m = 0;
             e = 0;
         } else {
