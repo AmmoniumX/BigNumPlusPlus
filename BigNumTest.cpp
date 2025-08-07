@@ -36,12 +36,14 @@ constexpr void assertEquals(const T& expected, const T& actual, const std::strin
         std::println(stderr, "Test failed: {}", testName);
         std::println(stderr, "  Expected: {}", to_string_test(expected));
         std::println(stderr, "  Got:      {}", to_string_test(actual));
+        std::exit(EXIT_FAILURE);
     }
 }
 
 constexpr void assertTrue(bool condition, const std::string_view& testName) {
     if (!condition) {
         std::println(stderr, "Test failed: {}", testName);
+        std::exit(EXIT_FAILURE);
     }
 }
 
@@ -50,7 +52,18 @@ void assertIsClose(double expected, double actual, const std::string_view& testN
         std::println(stderr, "Test failed: {}", testName);
         std::println(stderr, "  Expected: {}", expected);
         std::println(stderr, "  Got:      {}", actual);
+        std::exit(EXIT_FAILURE);
     }
+}
+
+void assertIsClose(BigNum expected, BigNum actual, const std::string_view& testName, double tolerance = 1e-5) {
+    if ((expected-actual).abs() > tolerance) {
+        std::println(stderr, "Test failed: {}", testName);
+        std::println(stderr, "  Expected: {}", expected.to_pretty_string());
+        std::println(stderr, "  Got:      {}", actual.to_pretty_string());
+        std::exit(EXIT_FAILURE);
+    }
+
 }
 
 
@@ -154,6 +167,20 @@ void runSpecialCaseTests() {
     assertTrue((BigNum::min() - 1) == BigNum::min(), "BigNum::min() - 1 is still min"sv);
 }
 
+void runSmallNumberTests() {
+    BigNum res1 = BigNum(1) / BigNum(2);
+    assertIsClose(BigNum(0.5), res1, "Small division test");
+
+    BigNum res2 = BigNum(1) - BigNum(0.1);
+    assertIsClose(BigNum(0.9), res2, "Small subtraction test");
+
+    BigNum res3 = BigNum(0.1) + BigNum(0.2);
+    assertIsClose(BigNum(0.3), res3, "Small addition test");
+
+    BigNum res4 = BigNum(0.5) * BigNum(0.25);
+    assertIsClose(BigNum(0.125), res4, "Small multiplication test");
+}
+
 int main() {
     std::println("Running tests...");
     
@@ -162,6 +189,7 @@ int main() {
     runComparisonTests();
     runAdvancedMathTests();
     runSpecialCaseTests();
+    runSmallNumberTests();
 
     std::println("Testing finished!");
 

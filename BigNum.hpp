@@ -1,8 +1,8 @@
 /*
-BigNum++: C++ port of https://github.com/veprogames/lua-big-number
+BigNum++: C++ port of https://github.com/Patashu/break_infinity.js
 Slightly modified to increase maximum range by moving negative numbers outside
 of the exponent's range (Emin is 0, therefore Emax is higher) Tradeoff: Cannot
-store numbers between (-1, 0) or (0, 1), but those aren't usually needed in the
+store numbers smaller than regular doubles, but those aren't usually needed in the
 types of games that would use this library
 */
 
@@ -22,6 +22,7 @@ types of games that would use this library
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <print>
 
 // Define a macro for deducing CONSTEXPR_NEXTAFTER_FALLBACK
 #if defined(__clang__)
@@ -52,7 +53,7 @@ struct BigNumContext {
   uint max_digits = 10; // Up to how many "real" digits to display before using
                         // scientific notation
   uint print_precision =
-      2; // How many fractional digits to display on scientific notation
+      3; // How many fractional digits to display on scientific notation
 };
 inline BigNumContext DefaultBigNumContext;
 
@@ -288,9 +289,9 @@ public:
 
   ~BigNum() = default; // Destructor
 
-  // Normalization: mantissa set in range (-10, 1] and [1, 10)
+  // Normalization: mantissa set in range (-10, 10)
   constexpr void normalize() {
-    // std::print("Normalizing BigNum: m = {}, e = {}\n", m, e);
+    // std::println("\nNormalizing BigNum: m = {}, e = {}", m, e);
     if (*this == max() || *this == min()) {
       return;
     }
@@ -307,9 +308,10 @@ public:
       return;
     } // For m = 0, set exponent to 0
     if (std::abs(m) < 1 && e == 0) {
-      m = 0;
+      // m = 0;
+      // std::println("No change");
       return;
-    } // Any number less than 1 is considered 0
+    } 
 
     // Start normalization
     int n_log;
@@ -318,12 +320,12 @@ public:
 #else
     n_log = std::max(static_cast<int>(std::floor(std::log10(std::abs(m)))), 0);
 #endif
+    // std::println("n_log: {}", n_log);
 
     // if (n_log < 0) { n_log = 0; }
     m = m / (*Pow10::get(n_log));
     e += n_log;
 
-    // TODO check if this is really needed or not
     // // Any number less than 1 is considered 0
     // if (e == 0) { m = floor(m); }
     // m = (std::abs(m) < 1 && e == 0) ? 0 : m;
@@ -341,9 +343,9 @@ public:
     if (e < std::numeric_limits<man_t>::max_digits10) {
       double target_precision = Pow10::get(e).value_or(1.0);
       m = std::round(m * target_precision) / target_precision;
-      // m = floor(m * target_precision) / target_precision;
+      // m = std::floor(m * target_precision) / target_precision;
     }
-    // std::print("Normalized BigNum: m = {}, e = {}\n", m, e);
+    // std::println("Normalized BigNum: m = {}, e = {}", m, e);
   }
 
   // Arithmetic operations
@@ -352,10 +354,10 @@ public:
     // Handle special cases early
     auto m_inf = std::numeric_limits<man_t>::infinity();
     if (m == m_inf || b.m == m_inf) {
-      return inf();
+        return inf();
     }
     if (std::isnan(m) || std::isnan(b.m)) {
-      return nan();
+        return nan();
     }
 
     // Handle max and min cases early
@@ -372,6 +374,12 @@ public:
       return min();
     }
 
+    // Handle simple case: both exponents are zero
+    if (e == 0 && b.e == 0) {
+        return BigNum(m + b.m, 0);
+    }
+
+    // Handle general case
     bool this_is_bigger = e > b.e;
     exp_t delta = this_is_bigger ? e - b.e : b.e - e;
     man_t m2;
@@ -399,19 +407,22 @@ public:
   }
 
   constexpr BigNum div(const BigNum &b) const {
+    // std::println("\nDividing BigNum({}, {}) / BigNum({}, {})", m, e, b.m, b.e);
     // division by zero, return NaN
     if (b.m == 0) {
       return nan();
     }
-    // Divisor is larger than dividend, result is 0
-    if (b.e > e) {
+
+    // Divisor is significantly larger than dividend, result is 0
+    static constexpr exp_t MAX_DIV_DIFF = 308;
+    // auto diff = b.e - e;
+    if ((b.e > e) && (b.e - e >= MAX_DIV_DIFF)) {
+      // std::println("Difference too large ({}), returning 0", diff);
       return BigNum(static_cast<man_t>(0));
     }
-    // Any number less than 1 is considered 0
-    if (b.e == e && std::abs(m / b.m) < 1) {
-      return BigNum(static_cast<man_t>(0));
-    }
+
     // Perform division
+    // std::println("Performing standard division");
     return BigNum(m / b.m, e - b.e);
   }
 
@@ -594,18 +605,35 @@ public:
       return "nan";
     }
 
+    // Handle small numbers directly
+    if (e == 0) {
+
+        double scale = *Pow10::get(precision);
+        man_t rounded = std::floor(m * scale) / scale;
+        std::string str = std::to_string(rounded);
+
+        // truncate string if it's bigger than precision (excluding leading 0 and decimal point)
+        if (str.length()-2 > precision) {
+            return str.substr(0, precision+2);
+        }
+
+        return str;
+    }
+
     // Can this number be fully displayed as a string <= max_digits long?
     // Assumes m and e are already normalized
     uint max_digits = std::max(precision + 1, DefaultBigNumContext.max_digits);
     if (this->e < max_digits - 1) {
       std::string str = to_string_full(m);
+      
+      // calculate new length based on 
       exp_t newLen = std::min(static_cast<exp_t>(max_digits), e + 1) +
                      (str[0] == '-' ? 1 : 0);
 
-      // Remove the decimal separator if it exists
+      // Remove the decimal separator if it exists (and isn't small number <1)
       str.erase(std::remove_if(str.begin(), str.end(),
-                               [](char c) { return c == DECIMAL_SEPARATOR; }),
-                str.end());
+                             [](char c) { return c == DECIMAL_SEPARATOR; }),
+              str.end());
 
       // If the string is shorter than the desired length, pad with zeros
       if (str.length() < newLen) {
@@ -615,7 +643,10 @@ public:
         // and round the last digit if necessary
         bool round_up = false;
 
-        if (str.length() > newLen && int(str[newLen]) >= 5) {
+        int first_unused_digit_pos = (str.length() > newLen) ? newLen : -1;
+        int first_unused_digit = (first_unused_digit_pos > 0) ? int(str[first_unused_digit_pos] - '0') : -1;
+
+        if (first_unused_digit >= 5) {
           // Round up the last digit
           round_up = true;
         }
