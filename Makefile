@@ -14,7 +14,7 @@ endif
 
 # clang++ specific flags
 ifeq ($(CXX),clang++)
-    CXXFLAGS += -DCONSTEXPR_NEXTAFTER_FALLBACK
+	CXXFLAGS +=-DCONSTEXPR_NEXTAFTER_FALLBACK # clang is currently behind on constexpr <cmath> :(
 endif
 
 ALL = BigNumTest.out
