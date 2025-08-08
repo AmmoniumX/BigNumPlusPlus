@@ -31,15 +31,21 @@ the types of games that would use this library
  */
 #if defined(__clang__)
 // Clang does NOT support constexpr std::nextafter as of now
+#ifndef CONSTEXPR_NEXTAFTER_FALLBACK
 #define CONSTEXPR_NEXTAFTER_FALLBACK
+#endif
 #elif defined(__GNUC__)
 // It's safe to use constexpr nextafter if we compile with -fno-trapping-math
 #ifndef NO_TRAPPING_MATH
+#ifndef CONSTEXPR_NEXTAFTER_FALLBACK
 #define CONSTEXPR_NEXTAFTER_FALLBACK
+#endif
 #endif
 #else
 // For other compilers, be conservative
+#ifndef CONSTEXPR_NEXTAFTER_FALLBACK
 #define CONSTEXPR_NEXTAFTER_FALLBACK
+#endif
 #endif
 
 // Define a macro for CPP26 and later for constexpr statements

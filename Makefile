@@ -3,12 +3,13 @@ CXX ?= g++
 
 # recommended: gnu++26, minimum: c++23
 # Common flags
-CXXFLAGS = -std=gnu++26 -Wall -Wextra -O3 -I.
+CXXFLAGS =-std=gnu++26 -Wall -Wextra -O3 -I. -march=native
+CXXFLAGS +=-fno-trapping-math -DNO_TRAPPING_MATH # add this to ensure constexpr maths
+# if for some reason you need -ftrapping-math, add -DCONSTEXPR_NEXTAFTER_FALLBACK
 
 # g++ specific flags
-# if for some reason you need -ftrapping-math, add -DCONSTEXPR_NEXTAFTER_FALLBACK
 ifeq ($(CXX),g++)
-    CXXFLAGS += -march=native -fno-trapping-math -DNO_TRAPPING_MATH -fsanitize=address,undefined
+    CXXFLAGS +=-fsanitize=address,undefined
 endif
 
 # clang++ specific flags
