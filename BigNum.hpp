@@ -30,31 +30,42 @@ the types of games that would use this library
  * implementation
  */
 
-// MSVC is really behind constexpr, so disable it altogether :(
 #ifdef _MSC_VER
-#define MAYBE_CONSTEXPR 
-#else
-#define MAYBE_CONSTEXPR constexpr
-#endif
 
-#if defined(__clang__)
+// MSVC is really behind constexpr, so disable it altogether :(
+#define MAYBE_CONSTEXPR 
+
+#elifdef __clang__
+// Clang supports most constexpr
+#define MAYBE_CONSTEXPR constexpr
+
 // Clang does NOT support constexpr std::nextafter as of now
 #ifndef CONSTEXPR_NEXTAFTER_FALLBACK
 #define CONSTEXPR_NEXTAFTER_FALLBACK
-#endif
-#elif defined(__GNUC__)
+#endif //CONSTEXPR_NEXTAFTER_FALLBACK
+
+#elifdef __GNUC__ // Neither _MSC_VER nor __clang__
+
+// GCC supports most constexpr
+#define MAYBE_CONSTEXPR constexpr
+
 // It's safe to use constexpr nextafter if we compile with -fno-trapping-math
 #ifndef NO_TRAPPING_MATH
+
 #ifndef CONSTEXPR_NEXTAFTER_FALLBACK
 #define CONSTEXPR_NEXTAFTER_FALLBACK
-#endif
-#endif
-#else
+#endif // CONSTEXPR_NEXTAFTER_FALLBACK
+
+#endif // NO_TRAPPING_MATH
+
+#else // Neither _MSC_VER, __clang__, nor __GNUC__
+
 // For other compilers, be conservative
 #ifndef CONSTEXPR_NEXTAFTER_FALLBACK
 #define CONSTEXPR_NEXTAFTER_FALLBACK
-#endif
-#endif
+#endif // CONSTEXPR_NEXTAFTER_FALLBACK
+
+#endif // _MSC_VER, __clang__, __GNUC__
 
 // Define a macro for CPP26 and later for statements
 #define CPP26 (__cplusplus >= 202600L)
