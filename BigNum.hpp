@@ -629,7 +629,10 @@ class BigNum {
             double scale = *Pow10::get(precision);
             man_t rounded = std::floor(m * scale) / scale;
             std::string str = std::to_string(rounded);
-
+            // If the string is just "0" or any 1-digit number, return immediately
+            if (str.length() == 1) {
+                return str;
+            }
             // remove trailing zeroes
             size_t last_nonzero_pos = str.find_last_not_of('0');
             if (last_nonzero_pos != std::string::npos) {
@@ -639,11 +642,7 @@ class BigNum {
                 } else {
                     str.resize(last_nonzero_pos + 1);
                 }
-            } else {
-                // Handle cases like "000" or empty string
-                str.clear();
             }
-
             // truncate string if it's bigger than precision (excluding leading
             // 0 and decimal point)
             if (str.length() - 2 > precision) {
