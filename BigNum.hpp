@@ -29,6 +29,14 @@ the types of games that would use this library
  * yet, so if we conclude that it's not constexpr, we use our own fallback
  * implementation
  */
+
+// MSVC is really behind constexpr, so disable it altogether :(
+#ifdef _MSC_VER
+#define MAYBE_CONSTEXPR 
+#else
+#define MAYBE_CONSTEXPR constexpr
+#endif
+
 #if defined(__clang__)
 // Clang does NOT support constexpr std::nextafter as of now
 #ifndef CONSTEXPR_NEXTAFTER_FALLBACK
@@ -48,32 +56,32 @@ the types of games that would use this library
 #endif
 #endif
 
-// Define a macro for CPP26 and later for constexpr statements
+// Define a macro for CPP26 and later for statements
 #define CPP26 (__cplusplus >= 202600L)
 
 // Constant precision for serializing
 namespace BigNumber {
 using namespace std::literals::string_literals;
 
-static constexpr uint SERIAL_PRECISION = 9;
-static constexpr char DECIMAL_SEPARATOR = '.';
-static constexpr char THOUSANDS_SEPARATOR = ',';
+static unsigned int SERIAL_PRECISION = 9;
+static char DECIMAL_SEPARATOR = '.';
+static char THOUSANDS_SEPARATOR = ',';
 
 // Formatting context
 struct BigNumContext {
-    uint max_digits = 10; // Up to how many "real" digits to display before
+    unsigned int max_digits = 10; // Up to how many "real" digits to display before
                           // using scientific notation
-    uint print_precision =
+    unsigned int print_precision =
         3; // How many fractional digits to display on scientific notation
 };
 // Global "default" context when none is passed to functions
 inline BigNumContext DefaultBigNumContext;
 
 // Precompute powers-of-10 table for performance
-static constexpr int Pow10TableOffset =
+static inline constexpr int Pow10TableOffset =
     std::numeric_limits<double>::max_exponent10;
-static constexpr int Pow10TableSize = 2 * Pow10TableOffset + 1;
-static constexpr std::array<double, Pow10TableSize> Pow10_generate_table() {
+static inline constexpr int Pow10TableSize = 2 * Pow10TableOffset + 1;
+static inline constexpr std::array<double, Pow10TableSize> Pow10_generate_table() {
     std::array<double, Pow10TableSize> table{};
     table[Pow10TableOffset] = 1.0;
     double pos = 1.0;
@@ -90,11 +98,11 @@ class Pow10 {
     Pow10() = delete;
 
   public:
-    static constexpr std::array<double, Pow10TableSize> Pow10Table =
+    static inline constexpr std::array<double, Pow10TableSize> Pow10Table =
         Pow10_generate_table();
 
     // e must be in the range [-offset, offset]
-    static constexpr std::optional<double> get(int e) {
+    static inline constexpr std::optional<double> get(int e) {
         if (e < -Pow10TableOffset || e > Pow10TableOffset) {
             return std::nullopt;
         }
@@ -117,9 +125,9 @@ class BigNum {
     static_assert(std::is_arithmetic_v<exp_t>,
                   "exponent must be an arithmetic type");
 
-    static constexpr exp_t MAX_DIV_DIFF = 308;
+    static inline constexpr exp_t MAX_DIV_DIFF = 308;
     // helper functions to convert strings to mantissa/exponent
-    static inline man_t strtom(const std::string_view &sv) {
+    static inline MAYBE_CONSTEXPR man_t strtom(const std::string_view &sv) {
         man_t m;
         auto result = std::from_chars(sv.data(), sv.data() + sv.size(), m);
         if (result.ec != std::errc()) {
@@ -128,7 +136,7 @@ class BigNum {
         }
         return m;
     }
-    static inline exp_t strtoe(const std::string_view &sv) {
+    static inline MAYBE_CONSTEXPR exp_t strtoe(const std::string_view &sv) {
         exp_t e;
         auto result = std::from_chars(sv.data(), sv.data() + sv.size(), e);
         if (result.ec != std::errc()) {
@@ -139,7 +147,7 @@ class BigNum {
     }
 
     // convert the number to a full-precision string
-    static std::string to_string_full(const man_t &value) {
+    static MAYBE_CONSTEXPR std::string to_string_full(const man_t &value) {
         std::ostringstream out;
         out << std::setprecision(std::numeric_limits<man_t>::digits10 + 1)
             << value;
@@ -147,7 +155,7 @@ class BigNum {
     }
 
     // convert double to string, rounding down and up to specific precision
-    static std::string to_string_floor(const double &value,
+    static MAYBE_CONSTEXPR std::string to_string_floor(const double &value,
                                        const int &precision) {
         // Assumes value is normalized to 1 digit before the decimal point
         // (|value| < 10)
@@ -170,9 +178,9 @@ class BigNum {
         return out_str;
     }
 
-// Fallback implemnetation in case of non-constexpr std::nextafter
-#ifdef CONSTEXPR_NEXTAFTER_FALLBACK
-    static constexpr double _prev_double(double x) {
+// Fallback implemnetation in case of non-std::nextafter
+#if defined(CONSTEXPR_NEXTAFTER_FALLBACK) && !defined(_MSC_VER)
+    static double _prev_double(double x) {
         using uint = std::uint64_t;
         static_assert(sizeof(double) == sizeof(uint),
                       "Size of float and uint must be the same");
@@ -189,7 +197,7 @@ class BigNum {
         return std::bit_cast<double>(bits);
     }
 
-    static constexpr double _next_double(double x) {
+    static double _next_double(double x) {
         using uint = std::uint64_t;
         static_assert(sizeof(double) == sizeof(uint),
                       "Size of float and uint must be the same");
@@ -207,9 +215,9 @@ class BigNum {
     }
 #endif
 
-// Fallback to constexpr std::log10 if not on C++26
+// Fallback to std::log10 if not on C++26
 #if !CPP26
-    static constexpr int _log10(double x) {
+    static int _log10(double x) {
         assert(x > 0.0 && "x must be positive for log10");
         int exponent = 0;
         while (x >= 10.0) {
@@ -224,13 +232,13 @@ class BigNum {
     }
 #endif
 
-    constexpr BigNum(const man_t mantissa, const exp_t exponent, bool normalize)
+    MAYBE_CONSTEXPR BigNum(const man_t mantissa, const exp_t exponent, bool normalize)
         : m(mantissa), e(exponent) {
         if (normalize)
             this->normalize();
     }
 
-    constexpr void parseStr(const std::string_view &sv) {
+    MAYBE_CONSTEXPR void parseStr(const std::string_view &sv) {
         try {
             size_t pos = sv.find('e');
             if (pos != std::string::npos) {
@@ -247,42 +255,42 @@ class BigNum {
         }
     }
 
-    constexpr void set(const BigNum &other) {
+    MAYBE_CONSTEXPR void set(const BigNum &other) {
         m = other.m;
         e = other.e;
     }
 
   public:
-    static constexpr const BigNum &inf() {
-        static constexpr BigNum inf_val(std::numeric_limits<man_t>::infinity(),
+    static MAYBE_CONSTEXPR const BigNum &inf() {
+        static BigNum inf_val(std::numeric_limits<man_t>::infinity(),
                                         0, false);
 
         return inf_val;
     }
-    static constexpr const BigNum &nan() {
-        static constexpr BigNum nan_val(std::numeric_limits<man_t>::quiet_NaN(),
+    static MAYBE_CONSTEXPR const BigNum &nan() {
+        static BigNum nan_val(std::numeric_limits<man_t>::quiet_NaN(),
                                         0, false);
 
         return nan_val;
     }
-    static constexpr const BigNum &max() {
-#ifdef CONSTEXPR_NEXTAFTER_FALLBACK
-        static constexpr const BigNum max_val(
+    static MAYBE_CONSTEXPR const BigNum &max() {
+#if defined(CONSTEXPR_NEXTAFTER_FALLBACK) && !defined(_MSC_VER)
+        static const BigNum max_val(
             _prev_double(10.0), std::numeric_limits<exp_t>::max(), false);
 #else
-        static constexpr const BigNum max_val(std::nextafter(10.0, 0.0),
+        static const BigNum max_val(std::nextafter(10.0, 0.0),
                                               std::numeric_limits<exp_t>::max(),
                                               false);
 #endif
 
         return max_val;
     }
-    static constexpr const BigNum &min() {
-#ifdef CONSTEXPR_NEXTAFTER_FALLBACK
-        static constexpr const BigNum min_val(
+    static MAYBE_CONSTEXPR const BigNum &min() {
+#if defined(CONSTEXPR_NEXTAFTER_FALLBACK) && !defined(_MSC_VER)
+        static const BigNum min_val(
             _next_double(-10.0), std::numeric_limits<exp_t>::max(), false);
 #else
-        static constexpr const BigNum min_val(std::nextafter(-10.0, 0.0),
+        static const BigNum min_val(std::nextafter(-10.0, 0.0),
                                               std::numeric_limits<exp_t>::max(),
                                               false);
 #endif
@@ -290,28 +298,28 @@ class BigNum {
         return min_val;
     }
 
-    constexpr man_t getM() const { return m; }
-    constexpr exp_t getE() const { return e; }
+    man_t getM() const { return m; }
+    exp_t getE() const { return e; }
 
-    constexpr BigNum(const man_t mantissa, const exp_t exponent = 0) {
+    MAYBE_CONSTEXPR BigNum(const man_t mantissa, const exp_t exponent = 0) {
         m = mantissa;
         e = exponent;
         normalize();
     }
 
-    constexpr BigNum(const std::string_view &str) { parseStr(str); }
+    MAYBE_CONSTEXPR BigNum(const std::string_view &str) { parseStr(str); }
 
     // Default methods to satisfy concepts
-    constexpr BigNum() : m(0), e(0) { normalize(); } // Default constructor
-    constexpr BigNum(const BigNum &) = default;      // Copy constructor
-    constexpr BigNum &operator=(const BigNum &) = default; // Copy assignment
-    constexpr BigNum(BigNum &&) = default;                 // Move constructor
-    constexpr BigNum &operator=(BigNum &&) = default;      // Move assignment
+    MAYBE_CONSTEXPR BigNum() : m(0), e(0) { normalize(); } // Default constructor
+    BigNum(const BigNum &) = default;      // Copy constructor
+    BigNum &operator=(const BigNum &) = default; // Copy assignment
+    BigNum(BigNum &&) = default;                 // Move constructor
+    BigNum &operator=(BigNum &&) = default;      // Move assignment
 
     ~BigNum() = default; // Destructor
 
     // Normalization: mantissa set in range (-10, 10)
-    constexpr void normalize() {
+    MAYBE_CONSTEXPR void normalize() {
         if (*this == max() || *this == min()) {
             return;
         }
@@ -362,7 +370,7 @@ class BigNum {
     }
 
     // Arithmetic operations
-    constexpr BigNum add(const BigNum &b) const {
+    MAYBE_CONSTEXPR BigNum add(const BigNum &b) const {
 
         // Handle special cases early
         auto m_inf = std::numeric_limits<man_t>::infinity();
@@ -411,15 +419,15 @@ class BigNum {
         return BigNum(m2, e2);
     }
 
-    constexpr BigNum sub(const BigNum &b) const {
+    MAYBE_CONSTEXPR BigNum sub(const BigNum &b) const {
         return add(BigNum(b.m * -1, b.e));
     }
 
-    constexpr BigNum mul(const BigNum &b) const {
+    MAYBE_CONSTEXPR BigNum mul(const BigNum &b) const {
         return BigNum(m * b.m, e + b.e);
     }
 
-    constexpr BigNum div(const BigNum &b) const {
+    MAYBE_CONSTEXPR BigNum div(const BigNum &b) const {
         // Division by zero, return NaN
         if (b.m == 0) {
             return nan();
@@ -434,13 +442,13 @@ class BigNum {
         return BigNum(m / b.m, e - b.e);
     }
 
-    constexpr BigNum abs() const { return BigNum(std::abs(m), e); }
+    MAYBE_CONSTEXPR BigNum abs() const { return BigNum(std::abs(m), e); }
 
-    constexpr BigNum negate() const {
+    MAYBE_CONSTEXPR BigNum negate() const {
         return mul(BigNum(static_cast<man_t>(-1)));
     }
 
-    constexpr BigNum &operator+=(const BigNum &b) {
+    MAYBE_CONSTEXPR BigNum &operator+=(const BigNum &b) {
         bool this_is_bigger = e > b.e;
         exp_t delta = this_is_bigger ? e - b.e : b.e - e;
         if (delta > 14) {
@@ -457,14 +465,14 @@ class BigNum {
         return *this;
     }
 
-    constexpr BigNum &operator*=(const BigNum &b) {
+    MAYBE_CONSTEXPR BigNum &operator*=(const BigNum &b) {
         m *= b.m;
         e += b.e;
         normalize();
         return *this;
     }
 
-    constexpr BigNum &operator/=(const BigNum &b) {
+    MAYBE_CONSTEXPR BigNum &operator/=(const BigNum &b) {
         if (b.m == 0) {
             // Division by zero, return NaN
             m = nan().m;
@@ -483,80 +491,80 @@ class BigNum {
     }
 
     // Operator overloads
-    constexpr BigNum operator+(const BigNum &other) const { return add(other); }
-    constexpr BigNum operator+(const std::string_view &other) const {
+    MAYBE_CONSTEXPR BigNum operator+(const BigNum &other) const { return add(other); }
+    MAYBE_CONSTEXPR BigNum operator+(const std::string_view &other) const {
         return add(BigNum(other));
     }
-    constexpr BigNum operator+(const man_t other) const {
+    MAYBE_CONSTEXPR BigNum operator+(const man_t other) const {
         return add(BigNum(other));
     }
-    constexpr BigNum operator-(const BigNum &other) const { return sub(other); }
-    constexpr BigNum operator-(const std::string_view &other) const {
+    MAYBE_CONSTEXPR BigNum operator-(const BigNum &other) const { return sub(other); }
+    MAYBE_CONSTEXPR BigNum operator-(const std::string_view &other) const {
         return sub(BigNum(other));
     }
-    constexpr BigNum operator-(const man_t other) const {
+    MAYBE_CONSTEXPR BigNum operator-(const man_t other) const {
         return sub(BigNum(other));
     }
-    constexpr BigNum operator*(const BigNum &other) const { return mul(other); }
-    constexpr BigNum operator*(const std::string_view &other) const {
+    MAYBE_CONSTEXPR BigNum operator*(const BigNum &other) const { return mul(other); }
+    MAYBE_CONSTEXPR BigNum operator*(const std::string_view &other) const {
         return mul(BigNum(other));
     }
-    constexpr BigNum operator*(const man_t other) const {
+    MAYBE_CONSTEXPR BigNum operator*(const man_t other) const {
         return mul(BigNum(other));
     }
-    constexpr BigNum operator/(const BigNum &other) const { return div(other); }
-    constexpr BigNum operator/(const std::string_view &other) const {
+    MAYBE_CONSTEXPR BigNum operator/(const BigNum &other) const { return div(other); }
+    MAYBE_CONSTEXPR BigNum operator/(const std::string_view &other) const {
         return div(BigNum(other));
     }
-    constexpr BigNum operator/(const man_t other) const {
+    MAYBE_CONSTEXPR BigNum operator/(const man_t other) const {
         return div(BigNum(other));
     }
-    constexpr BigNum operator-() const { return negate(); }
-    constexpr BigNum &operator+=(const std::string_view &b) {
+    MAYBE_CONSTEXPR BigNum operator-() const { return negate(); }
+    MAYBE_CONSTEXPR BigNum &operator+=(const std::string_view &b) {
         return *this += BigNum(b);
     }
-    constexpr BigNum &operator+=(const man_t b) { return *this += BigNum(b); }
-    constexpr BigNum &operator-=(const BigNum &b) {
+    MAYBE_CONSTEXPR BigNum &operator+=(const man_t b) { return *this += BigNum(b); }
+    MAYBE_CONSTEXPR BigNum &operator-=(const BigNum &b) {
         return *this += BigNum(b.m * -1, b.e);
     }
-    constexpr BigNum &operator-=(const std::string_view &b) {
+    MAYBE_CONSTEXPR BigNum &operator-=(const std::string_view &b) {
         return *this -= BigNum(b);
     }
-    constexpr BigNum &operator-=(const man_t b) { return *this -= BigNum(b); }
-    constexpr BigNum &operator*=(const std::string_view &b) {
+    MAYBE_CONSTEXPR BigNum &operator-=(const man_t b) { return *this -= BigNum(b); }
+    MAYBE_CONSTEXPR BigNum &operator*=(const std::string_view &b) {
         return *this *= BigNum(b);
     }
-    constexpr BigNum &operator*=(const man_t b) { return *this *= BigNum(b); }
-    constexpr BigNum &operator/=(const std::string_view &b) {
+    MAYBE_CONSTEXPR BigNum &operator*=(const man_t b) { return *this *= BigNum(b); }
+    MAYBE_CONSTEXPR BigNum &operator/=(const std::string_view &b) {
         return *this /= BigNum(b);
     }
-    constexpr BigNum &operator/=(const man_t b) { return *this /= BigNum(b); }
-    constexpr BigNum &operator++() {
+    MAYBE_CONSTEXPR BigNum &operator/=(const man_t b) { return *this /= BigNum(b); }
+    MAYBE_CONSTEXPR BigNum &operator++() {
         return *this += BigNum(static_cast<man_t>(1));
     }
-    constexpr BigNum operator++(int) {
+    MAYBE_CONSTEXPR BigNum operator++(int) {
         BigNum temp(*this);
         *this += BigNum(static_cast<man_t>(1));
         return temp;
     }
-    constexpr BigNum &operator--() {
+    MAYBE_CONSTEXPR BigNum &operator--() {
         return *this -= BigNum(static_cast<man_t>(1));
     }
-    constexpr BigNum operator--(int) {
+    MAYBE_CONSTEXPR BigNum operator--(int) {
         BigNum temp(*this);
         *this -= BigNum(static_cast<man_t>(1));
         return temp;
     }
 
     // Comparison operations
-    constexpr bool is_positive() const { return m >= 0; }
-    constexpr bool is_negative() const { return m < 0; }
-    constexpr bool is_inf() const { return std::isinf(m); }
-    constexpr bool is_nan() const { return std::isnan(m); }
-    static constexpr BigNum &max(BigNum &a, BigNum &b) { return a > b ? a : b; }
-    static constexpr BigNum &min(BigNum &a, BigNum &b) { return a < b ? a : b; }
+    MAYBE_CONSTEXPR bool is_positive() const { return m >= 0; }
+    MAYBE_CONSTEXPR bool is_negative() const { return m < 0; }
+    MAYBE_CONSTEXPR bool is_inf() const { return std::isinf(m); }
+    MAYBE_CONSTEXPR bool is_nan() const { return std::isnan(m); }
+    static MAYBE_CONSTEXPR BigNum &max(BigNum &a, BigNum &b) { return a > b ? a : b; }
+    static MAYBE_CONSTEXPR BigNum &min(BigNum &a, BigNum &b) { return a < b ? a : b; }
 
-    constexpr std::partial_ordering operator<=>(const BigNum &b) const {
+    MAYBE_CONSTEXPR std::partial_ordering operator<=>(const BigNum &b) const {
         if (is_nan() || b.is_nan())
             return std::partial_ordering::unordered;
 
@@ -595,19 +603,19 @@ class BigNum {
     }
     // Equality operator (only use this under the assumption that the numbers
     // are already normalized)
-    constexpr bool operator==(const BigNum &other) const = default;
+    MAYBE_CONSTEXPR bool operator==(const BigNum &other) const = default;
 
-    constexpr std::partial_ordering
+    MAYBE_CONSTEXPR std::partial_ordering
     operator<=>(const std::string_view &other) const {
         return *this <=> BigNum(other);
     }
-    constexpr std::partial_ordering operator<=>(const man_t other) const {
+    MAYBE_CONSTEXPR std::partial_ordering operator<=>(const man_t other) const {
         return *this <=> BigNum(other);
     }
 
     // Conversion methods
-    constexpr std::string to_string(
-        const uint &precision = DefaultBigNumContext.print_precision) const {
+    std::string to_string(
+        const unsigned int &precision = DefaultBigNumContext.print_precision) const {
         if (this->is_inf()) {
             return "inf";
         }
@@ -622,18 +630,31 @@ class BigNum {
             man_t rounded = std::floor(m * scale) / scale;
             std::string str = std::to_string(rounded);
 
+            // remove trailing zeroes
+            size_t last_nonzero_pos = str.find_last_not_of('0');
+            if (last_nonzero_pos != std::string::npos) {
+                // If the string is a decimal, we also need to check for a trailing decimal point.
+                if (str[last_nonzero_pos] == '.') {
+                    str.resize(last_nonzero_pos);
+                } else {
+                    str.resize(last_nonzero_pos + 1);
+                }
+            } else {
+                // Handle cases like "000" or empty string
+                str.clear();
+            }
+
             // truncate string if it's bigger than precision (excluding leading
             // 0 and decimal point)
             if (str.length() - 2 > precision) {
                 return str.substr(0, precision + 2);
             }
-
             return str;
         }
 
         // Can this number be fully displayed as a string <= max_digits long?
         // Assumes m and e are already normalized
-        uint max_digits =
+        unsigned int max_digits =
             std::max(precision + 1, DefaultBigNumContext.max_digits);
         if (this->e < max_digits - 1) {
             std::string str = to_string_full(m);
@@ -708,8 +729,8 @@ class BigNum {
 
     // Pretty string: 1234567 -> 1,234,567
     // Scientific notation is not affected
-    constexpr std::string to_pretty_string(
-        const uint &precision = DefaultBigNumContext.print_precision) const {
+    std::string to_pretty_string(
+        const unsigned int &precision = DefaultBigNumContext.print_precision) const {
         std::string str = to_string(precision);
 
         // Early exit if in scientific notation or if the number is too small
@@ -728,16 +749,16 @@ class BigNum {
     }
 
     // Standard methods for (de)serialization
-    constexpr std::string serialize() const {
+    std::string serialize() const {
         return to_string(SERIAL_PRECISION);
     }
 
-    static constexpr BigNum deserialize(const std::string_view &str) {
+    static BigNum deserialize(const std::string_view &str) {
         return BigNum(str);
     }
 
     // Returns number as intmax_t, or nullopt if the number is too large
-    constexpr std::optional<intmax_t> to_number() const {
+    MAYBE_CONSTEXPR std::optional<intmax_t> to_number() const {
         int total_digits = e + std::log10(std::abs(m)) + 1;
         if (total_digits > std::numeric_limits<intmax_t>::digits10) {
             // std::cerr << "Number is too large to convert to intmax_t: " <<
@@ -756,7 +777,7 @@ class BigNum {
     // Mathematical operations
 
     // Returns log10(num), or nullopt if the result would be too large
-    constexpr std::optional<double> log10() const {
+    MAYBE_CONSTEXPR std::optional<double> log10() const {
         if (std::numeric_limits<double>::max() - e < std::log10(m)) {
             return std::nullopt;
         }
@@ -764,7 +785,7 @@ class BigNum {
     }
 
     // Returns num^power
-    constexpr BigNum pow(double power) const {
+    MAYBE_CONSTEXPR BigNum pow(double power) const {
         // Special cases
         if (power == 0.0) {
             return BigNum(static_cast<man_t>(1));
@@ -817,12 +838,12 @@ class BigNum {
     }
 
     // Integer power overload - just calls the double version
-    constexpr BigNum pow(intmax_t power) const {
+    MAYBE_CONSTEXPR BigNum pow(intmax_t power) const {
         return pow(static_cast<double>(power));
     }
 
     // Returns num^(1/n), aka the nth root
-    constexpr BigNum root(intmax_t n) const {
+    MAYBE_CONSTEXPR BigNum root(intmax_t n) const {
         if (n == 0) {
             throw std::domain_error("Cannot take the zeroth root");
         } // Handle zero early
@@ -859,12 +880,12 @@ class BigNum {
     }
 
     // Returns e^num
-    static constexpr BigNum exp(exp_t n) {
+    static MAYBE_CONSTEXPR BigNum exp(exp_t n) {
         return BigNum(std::exp(1)).pow(static_cast<intmax_t>(n));
     }
 
     // Returns the square root of num
-    constexpr BigNum sqrt() const { return root(2); }
+    MAYBE_CONSTEXPR BigNum sqrt() const { return root(2); }
 };
 
 inline std::ostream &operator<<(std::ostream &os, const BigNum &bn) {
