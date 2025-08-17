@@ -637,28 +637,25 @@ class BigNum {
         // Handle small numbers directly
         if (e == 0) {
 
+            // Round down to specified precision
             double scale = *Pow10::get(precision);
-            man_t rounded = std::floor(m * scale) / scale;
-            std::string str = std::to_string(rounded);
-            // If the string is just "0" or any 1-digit number, return immediately
-            if (str.length() == 1) {
-                return str;
-            }
-            // remove trailing zeroes
+            double rounded = std::floor(m * scale) / scale;
+
+            // Use std::format for fixed precision and predictable output
+            std::string str = std::format("{:.{}f}", rounded, precision-1);
+
+            // Remove trailing zeroes and the decimal point if it's the last character
             size_t last_nonzero_pos = str.find_last_not_of('0');
             if (last_nonzero_pos != std::string::npos) {
-                // If the string is a decimal, we also need to check for a trailing decimal point.
                 if (str[last_nonzero_pos] == '.') {
+                    // Remove the decimal point if it's the last character after trimming zeros
                     str.resize(last_nonzero_pos);
                 } else {
+                    // Trim trailing zeros
                     str.resize(last_nonzero_pos + 1);
                 }
             }
-            // truncate string if it's bigger than precision (excluding leading
-            // 0 and decimal point)
-            if (str.length() - 2 > precision) {
-                return str.substr(0, precision + 2);
-            }
+
             return str;
         }
 
