@@ -74,9 +74,9 @@ the types of games that would use this library
 namespace BigNumber {
 using namespace std::literals::string_literals;
 
-static unsigned int SERIAL_PRECISION = 9;
-static char DECIMAL_SEPARATOR = '.';
-static char THOUSANDS_SEPARATOR = ',';
+static constexpr unsigned int SERIAL_PRECISION = 9;
+static constexpr char DECIMAL_SEPARATOR = '.';
+static constexpr char THOUSANDS_SEPARATOR = ',';
 
 // Formatting context
 struct BigNumContext {
@@ -89,9 +89,9 @@ struct BigNumContext {
 inline BigNumContext DefaultBigNumContext;
 
 // Precompute powers-of-10 table for performance
-static inline constexpr int Pow10TableOffset =
+static constexpr int Pow10TableOffset =
     std::numeric_limits<double>::max_exponent10;
-static inline constexpr int Pow10TableSize = 2 * Pow10TableOffset + 1;
+static constexpr int Pow10TableSize = 2 * Pow10TableOffset + 1;
 static inline constexpr std::array<double, Pow10TableSize> Pow10_generate_table() {
     std::array<double, Pow10TableSize> table{};
     table[Pow10TableOffset] = 1.0;
