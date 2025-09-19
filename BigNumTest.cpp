@@ -1,9 +1,7 @@
-#include <cassert>
-#include <cmath>
-#include <cstdlib>
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include <doctest/doctest.h>
+
 #include <optional>
-#include <print>
-#include <sstream>
 #include <string>
 #include <string_view>
 
@@ -12,208 +10,155 @@
 using namespace std::literals::string_literals;
 using namespace std::literals::string_view_literals;
 
-// Helper to convert anything to a string for printing
-template <typename T> std::string to_string_test(const T &value) {
-    std::stringstream ss;
-    ss << value;
-    return ss.str();
-}
+namespace doctest {
+template <> struct StringMaker<BigNum> {
+    static String convert(const BigNum &value) {
+        return value.to_string(9).c_str();
+    }
+};
+} // namespace doctest
 
-// Overload for BigNum to use its own to_string
-std::string to_string_test(const BigNum &value) {
-    return value.to_string(9); // Use high precision for tests
-}
+TEST_SUITE("Instantiation Tests") {
+    TEST_CASE("Instantiation from string") {
+        BigNum v1("1.23456789e123456789");
+        CHECK_EQ("1.23e123456789"s, v1.to_string(2));
 
-// Overload for booleans
-std::string to_string_test(const bool value) {
-    return value ? "true" : "false";
-}
+        BigNum v2("-1.23456789e123456789");
+        CHECK_EQ("-1.24e123456789"s, v2.to_string(2));
 
-template <typename T>
-constexpr void assertEquals(const T &expected, const T &actual,
-                            const std::string_view &testName) {
-    if (expected != actual) {
-        std::println(stderr, "Test failed: {}", testName);
-        std::println(stderr, "  Expected: {}", to_string_test(expected));
-        std::println(stderr, "  Got:      {}", to_string_test(actual));
-        std::exit(EXIT_FAILURE);
+        BigNum v3("100");
+        CHECK_EQ("100"s, v3.to_string());
+
+        BigNum v4("10");
+        CHECK_EQ("10"s, v4.to_string());
+
+        BigNum v5("0");
+        CHECK_EQ("0"s, v5.to_string());
+    }
+
+    TEST_CASE("Special values") {
+        CHECK(BigNum::inf().is_inf());
+        CHECK(BigNum::nan().is_nan());
+    }
+
+    TEST_CASE("Instantiation from integer") {
+        BigNum v6(123456789L);
+        CHECK_EQ("123456789"s, v6.to_string());
+        CHECK_EQ("123,456,789"s, v6.to_pretty_string());
     }
 }
 
-constexpr void assertTrue(bool condition, const std::string_view &testName) {
-    if (!condition) {
-        std::println(stderr, "Test failed: {}", testName);
-        std::exit(EXIT_FAILURE);
-    }
-}
-
-void assertIsClose(double expected, double actual,
-                   const std::string_view &testName, double tolerance = 1e-5) {
-    if (std::abs(expected - actual) > tolerance) {
-        std::println(stderr, "Test failed: {}", testName);
-        std::println(stderr, "  Expected: {}", expected);
-        std::println(stderr, "  Got:      {}", actual);
-        std::exit(EXIT_FAILURE);
-    }
-}
-
-void assertIsClose(BigNum expected, BigNum actual,
-                   const std::string_view &testName, double tolerance = 1e-5) {
-    if ((expected - actual).abs() > tolerance) {
-        std::println(stderr, "Test failed: {}", testName);
-        std::println(stderr, "  Expected: {}", expected.to_pretty_string());
-        std::println(stderr, "  Got:      {}", actual.to_pretty_string());
-        std::exit(EXIT_FAILURE);
-    }
-}
-
-void runInstantiationTests() {
-    BigNum v1("1.23456789e123456789");
-    assertEquals("1.23e123456789"s, v1.to_string(2),
-                 "Instantiation from string (positive)"sv);
-
-    BigNum v2("-1.23456789e123456789");
-    assertEquals("-1.24e123456789"s, v2.to_string(2),
-                 "Instantiation from string (negative)"sv);
-
-    BigNum v3("100");
-    assertEquals("100"s, v3.to_string(),
-                 "Instantiation from string (small positive)"sv);
-
-    BigNum v4("10");
-    assertEquals("10"s, v4.to_string(),
-                 "Instantiation from string (small positive 2)"sv);
-
-    BigNum v5("0");
-    assertEquals("0"s, v5.to_string(), "Instantiation from string (zero)"sv);
-
-    assertTrue(BigNum::inf().is_inf(), "BigNum::inf()"sv);
-    assertTrue(BigNum::nan().is_nan(), "BigNum::nan()"sv);
-
-    BigNum v6(123456789L);
-    assertEquals("123456789"s, v6.to_string(), "Instantiation from integer"sv);
-    assertEquals("123,456,789"s, v6.to_pretty_string(),
-                 "Pretty string formatting"sv);
-}
-
-void runMathTests() {
+TEST_SUITE("Math Tests") {
     BigNum v1("1.23e100");
     BigNum v2("-1.23e100");
     BigNum v3("100");
     BigNum v4("10");
     BigNum v5("0");
 
-    assertEquals(v5, v1 + v2, "Addition (positive + negative)"sv);
-    assertEquals("-1.23e100"s, (v2 + v3).to_string(2),
-                 "Addition (negative + small positive)"sv);
-    assertEquals(BigNum("110"), v3 + v4,
-                 "Addition (small positive + small positive)"sv);
-    assertEquals(v4, v4 + v5, "Addition (small positive + zero)"sv);
+    TEST_CASE("Addition") {
+        CHECK((v1 + v2).abs() < 1e-9);
+        CHECK_EQ("-1.23e100"s, (v2 + v3).to_string(2));
+        CHECK_EQ(BigNum("110"), v3 + v4);
+        CHECK_EQ(v4, v4 + v5);
+    }
 
-    assertEquals("2.46e100"s, (v1 - v2).to_string(2),
-                 "Subtraction (positive - negative)"sv);
-    assertEquals("-1.23e100"s, (v2 - v3).to_string(2),
-                 "Subtraction (negative - small positive)"sv);
-    assertEquals(BigNum("90"), v3 - v4,
-                 "Subtraction (small positive - small positive)"sv);
-    assertEquals(v4, v4 - v5, "Subtraction (small positive - zero)"sv);
+    TEST_CASE("Subtraction") {
+        CHECK_EQ("2.46e100"s, (v1 - v2).to_string(2));
+        CHECK_EQ("-1.23e100"s, (v2 - v3).to_string(2));
+        CHECK_EQ(BigNum("90"), v3 - v4);
+        CHECK_EQ(v4, v4 - v5);
+    }
 
-    assertEquals(BigNum("1000"), v3 * v4,
-                 "Multiplication (small positive * small positive)"sv);
-    assertEquals(v5, v4 * v5, "Multiplication (small positive * zero)"sv);
+    TEST_CASE("Multiplication") {
+        CHECK_EQ(BigNum("1000"), v3 * v4);
+        CHECK_EQ(v5, v4 * v5);
+    }
 
-    assertEquals(v4, v3 / v4, "Division (small positive / small positive)"sv);
-    assertTrue((v4 / v5).is_nan(), "Division (small positive / zero)"sv);
+    TEST_CASE("Division") {
+        CHECK_EQ(v4, v3 / v4);
+        CHECK((v4 / v5).is_nan());
+    }
 }
 
-void runComparisonTests() {
+TEST_SUITE("Comparison Tests") {
     BigNum v1("1.23e100");
     BigNum v2("-1.23e100");
     BigNum v3("100");
     BigNum v4("10");
     BigNum v5("0");
 
-    assertTrue(!(v1 < v2), "Comparison (v1 < v2)"sv);
-    assertTrue(v1 > v2, "Comparison (v1 > v2)"sv);
-    assertTrue(v1 != v2, "Comparison (v1 != v2)"sv);
-    assertTrue(v1 > v3, "Comparison (v1 > v3)"sv);
-    assertTrue(v1 > v4, "Comparison (v1 > v4)"sv);
-    assertTrue(v1 > v5, "Comparison (v1 > v5)"sv);
+    TEST_CASE("v1 comparisons") {
+        CHECK_FALSE(v1 < v2);
+        CHECK(v1 > v2);
+        CHECK(v1 != v2);
+        CHECK(v1 > v3);
+        CHECK(v1 > v4);
+        CHECK(v1 > v5);
+    }
 
-    assertTrue(v2 < v3, "Comparison (v2 < v3)"sv);
-    assertTrue(v2 < v4, "Comparison (v2 < v4)"sv);
-    assertTrue(v2 < v5, "Comparison (v2 < v5)"sv);
+    TEST_CASE("v2 comparisons") {
+        CHECK(v2 < v3);
+        CHECK(v2 < v4);
+        CHECK(v2 < v5);
+    }
 
-    assertTrue(v3 > v4, "Comparison (v3 > v4)"sv);
-    assertTrue(v3 > v5, "Comparison (v3 > v5)"sv);
+    TEST_CASE("v3 comparisons") {
+        CHECK(v3 > v4);
+        CHECK(v3 > v5);
+    }
 
-    assertTrue(v4 > v5, "Comparison (v4 > v5)"sv);
+    TEST_CASE("v4 comparisons") {
+        CHECK(v4 > v5);
+    }
 }
 
-void runAdvancedMathTests() {
-    assertEquals(BigNum(static_cast<intmax_t>(256)),
-                 BigNum(static_cast<intmax_t>(16)).pow(2.0), "pow(2.0)"sv);
-    assertEquals(BigNum(static_cast<intmax_t>(8)),
-                 BigNum(static_cast<intmax_t>(64)).sqrt(), "sqrt()"sv);
-    assertEquals(BigNum("1e6"), BigNum(static_cast<intmax_t>(10)).pow(6.0),
-                 "pow(6.0)"sv);
-    assertEquals(BigNum(static_cast<intmax_t>(42)),
-                 BigNum(static_cast<intmax_t>(42)).pow(2.0).sqrt(),
-                 "sqrt(pow(2.0))"sv);
-    assertEquals(BigNum(static_cast<intmax_t>(3)),
-                 BigNum(static_cast<intmax_t>(27)).root(3), "root(3)"sv);
+TEST_SUITE("Advanced Math Tests") {
+    TEST_CASE("Power and square root") {
+        CHECK((BigNum(static_cast<intmax_t>(16)).pow(2.0) - BigNum(static_cast<intmax_t>(256))).abs() < 1e-9);
+        CHECK((BigNum(static_cast<intmax_t>(64)).sqrt() - BigNum(static_cast<intmax_t>(8))).abs() < 1e-9);
+        CHECK((BigNum(static_cast<intmax_t>(10)).pow(6.0) - BigNum("1e6")).abs() < 1e-9);
+        CHECK((BigNum(static_cast<intmax_t>(42)).pow(2.0).sqrt() - BigNum(static_cast<intmax_t>(42))).abs() < 1e-9);
+        CHECK((BigNum(static_cast<intmax_t>(27)).root(3) - BigNum(static_cast<intmax_t>(3))).abs() < 1e-9);
+    }
 
-    auto log1 = BigNum(static_cast<intmax_t>(12345)).log10();
-    assertTrue(log1.has_value(), "log10(12345) exists"sv);
-    assertIsClose(4.09149, *log1, "log10(12345) value"sv);
+    TEST_CASE("Logarithm") {
+        auto log1 = BigNum(static_cast<intmax_t>(12345)).log10();
+        CHECK(log1.has_value());
+        CHECK(*log1 == doctest::Approx(4.09149));
 
-    auto log2 = BigNum("1.234e1000").log10();
-    assertTrue(log2.has_value(), "log10(1.234e1000) exists"sv);
-    assertIsClose(1000.0913, *log2, "log10(1.234e1000) value"sv, 1e-4);
+        auto log2 = BigNum("1.234e1000").log10();
+        CHECK(log2.has_value());
+        CHECK(*log2 == doctest::Approx(1000.0913).epsilon(1e-4));
+    }
 }
 
-void runSpecialCaseTests() {
-    assertTrue(BigNum::inf().is_inf(), "BigNum::inf() is infinity"sv);
-    assertTrue(BigNum::nan().is_nan(), "BigNum::nan() is NaN"sv);
+TEST_SUITE("Special Case Tests") {
+    TEST_CASE("Infinity and NaN") {
+        CHECK(BigNum::inf().is_inf());
+        CHECK(BigNum::nan().is_nan());
+        CHECK((BigNum::inf() + BigNum::inf()) == BigNum::inf());
+        CHECK((BigNum::nan() + BigNum::nan()).is_nan());
+        CHECK_FALSE(BigNum::nan() == BigNum::nan());
+    }
 
-    assertTrue((BigNum::inf() + BigNum::inf()) == BigNum::inf(),
-               "BigNum::inf() + BigNum::inf() is still infinity"sv);
-    assertTrue((BigNum::nan() + BigNum::nan()).is_nan(),
-               "BigNum::nan() + BigNum::nan() is NaN"sv);
-    assertTrue(!(BigNum::nan() == BigNum::nan()),
-               "BigNum::nan() is not equal to itself"sv);
-
-    assertTrue((BigNum::max() + 1) == BigNum::max(),
-               "BigNum::max() + 1 is still max"sv);
-    assertTrue((BigNum::min() - 1) == BigNum::min(),
-               "BigNum::min() - 1 is still min"sv);
+    TEST_CASE("Max and Min") {
+        CHECK((BigNum::max() + 1) == BigNum::max());
+        CHECK((BigNum::min() - 1) == BigNum::min());
+    }
 }
 
-void runSmallNumberTests() {
-    BigNum res1 = BigNum(1) / BigNum(2);
-    assertIsClose(BigNum(0.5), res1, "Small division test");
+TEST_SUITE("Small Number Tests") {
+    TEST_CASE("Small number operations") {
+        BigNum res1 = BigNum(1) / BigNum(2);
+        CHECK((res1 - BigNum(0.5)).abs() < 1e-5);
 
-    BigNum res2 = BigNum(1) - BigNum(0.1);
-    assertIsClose(BigNum(0.9), res2, "Small subtraction test");
+        BigNum res2 = BigNum(1) - BigNum(0.1);
+        CHECK((res2 - BigNum(0.9)).abs() < 1e-5);
 
-    BigNum res3 = BigNum(0.1) + BigNum(0.2);
-    assertIsClose(BigNum(0.3), res3, "Small addition test");
+        BigNum res3 = BigNum(0.1) + BigNum(0.2);
+        CHECK((res3 - BigNum(0.3)).abs() < 1e-5);
 
-    BigNum res4 = BigNum(0.5) * BigNum(0.25);
-    assertIsClose(BigNum(0.125), res4, "Small multiplication test");
-}
-
-int main() {
-    std::println("Running tests...");
-
-    runInstantiationTests();
-    runMathTests();
-    runComparisonTests();
-    runAdvancedMathTests();
-    runSpecialCaseTests();
-    runSmallNumberTests();
-
-    std::println("Testing finished!");
-
-    return 0;
+        BigNum res4 = BigNum(0.5) * BigNum(0.25);
+        CHECK((res4 - BigNum(0.125)).abs() < 1e-5);
+    }
 }
