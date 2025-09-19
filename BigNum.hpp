@@ -18,7 +18,6 @@ the types of games that would use this library
 #include <iostream>
 #include <limits>
 #include <optional>
-#include <print>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -74,9 +73,9 @@ the types of games that would use this library
 namespace BigNumber {
 using namespace std::literals::string_literals;
 
-static constexpr unsigned int SERIAL_PRECISION = 9;
-static constexpr char DECIMAL_SEPARATOR = '.';
-static constexpr char THOUSANDS_SEPARATOR = ',';
+static unsigned int SERIAL_PRECISION = 9;
+static char DECIMAL_SEPARATOR = '.';
+static char THOUSANDS_SEPARATOR = ',';
 
 // Formatting context
 struct BigNumContext {
@@ -89,9 +88,9 @@ struct BigNumContext {
 inline BigNumContext DefaultBigNumContext;
 
 // Precompute powers-of-10 table for performance
-static constexpr int Pow10TableOffset =
+static inline constexpr int Pow10TableOffset =
     std::numeric_limits<double>::max_exponent10;
-static constexpr int Pow10TableSize = 2 * Pow10TableOffset + 1;
+static inline constexpr int Pow10TableSize = 2 * Pow10TableOffset + 1;
 static inline constexpr std::array<double, Pow10TableSize> Pow10_generate_table() {
     std::array<double, Pow10TableSize> table{};
     table[Pow10TableOffset] = 1.0;
