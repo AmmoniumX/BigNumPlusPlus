@@ -41,10 +41,7 @@ e.g BigNum(0.1, 0)
 // Clang supports most constexpr
 #define MAYBE_CONSTEXPR constexpr
 
-// Clang does NOT support constexpr std::nextafter as of now
-#ifndef CONSTEXPR_NEXTAFTER_FALLBACK
-#define CONSTEXPR_NEXTAFTER_FALLBACK
-#endif // CONSTEXPR_NEXTAFTER_FALLBACK
+// Clang supports constexpr std::nextafter
 
 #elifdef __GNUC__ // Neither _MSC_VER nor __clang__
 
@@ -63,6 +60,8 @@ e.g BigNum(0.1, 0)
 #else // Neither _MSC_VER, __clang__, nor __GNUC__
 
 // For other compilers, be conservative
+#define MAYBE_CONSTEXPR
+
 #ifndef CONSTEXPR_NEXTAFTER_FALLBACK
 #define CONSTEXPR_NEXTAFTER_FALLBACK
 #endif // CONSTEXPR_NEXTAFTER_FALLBACK
