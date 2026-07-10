@@ -203,27 +203,19 @@ private:
   }
 
 public:
-  static constexpr const BigNum_ &inf() {
-    static BigNum_ inf_val(std::numeric_limits<man_t>::infinity(), 0, false);
-
-    return inf_val;
+  static constexpr BigNum_ inf() {
+    return BigNum_(std::numeric_limits<man_t>::infinity(), 0, false);
   }
-  static constexpr const BigNum_ &nan() {
-    static BigNum_ nan_val(std::numeric_limits<man_t>::quiet_NaN(), 0, false);
-
-    return nan_val;
+  static constexpr BigNum_ nan() {
+    return BigNum_(std::numeric_limits<man_t>::quiet_NaN(), 0, false);
   }
-  static constexpr const BigNum_ &max() {
-    static const BigNum_ max_val(std::nextafter(10.0, 0.0),
-                                 std::numeric_limits<exp_t>::max(), false);
-
-    return max_val;
+  static constexpr BigNum_ max() {
+    return BigNum_(std::nextafter(10.0, 0.0), std::numeric_limits<exp_t>::max(),
+                   false);
   }
-  static constexpr const BigNum_ &min() {
-    static const BigNum_ min_val(std::nextafter(-10.0, 0.0),
-                                 std::numeric_limits<exp_t>::max(), false);
-
-    return min_val;
+  static constexpr BigNum_ min() {
+    return BigNum_(std::nextafter(-10.0, 0.0),
+                   std::numeric_limits<exp_t>::max(), false);
   }
 
   man_t getM() const { return m; }
